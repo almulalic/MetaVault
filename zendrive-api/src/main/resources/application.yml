@@ -1,0 +1,40 @@
+spring:
+  application.name: zendrive-api
+
+  elasticsearch:
+    uris: https://elastic.tuxhub.cloud
+    username: elastic
+    password: AbsVdL6V2KuGz7JeGSryQxMmSYJVSoMH
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/zendrive
+    username: postgres
+    password: password
+  jpa:
+    generate-ddl: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        ddl-auto: update
+
+server:
+  port: 9999
+
+cors:
+  allowed-origins: "*"
+  allowed-methods: GET,POST,PUT,PATCH,DELETE
+  allowed-headers: Authorization,Content-Type
+
+configuration:
+  swagger:
+    app: 'ZenDrive'
+    version: '1.0.0'
+    description: 'API For ZenDrive'
+    developer: 'Almir Mulalic'
+    email:
+
+security:
+  jwt:
+    secret: "WKBWPAsookBAdWb8udu48Sa4tsktXeyQR8unTYosJVLFMeaTKzuG2DHeGfYKZbRa"
+    expirationSeconds: 1440
+    jwtRefreshExpirationMs: 86400000

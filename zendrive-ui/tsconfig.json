@@ -1,0 +1,44 @@
+{
+	"compilerOptions": {
+		"target": "ES2020",
+		"useDefineForClassFields": true,
+		"lib": ["ES2020", "DOM", "DOM.Iterable"],
+		"module": "ESNext",
+		"skipLibCheck": true,
+
+		/* Bundler mode */
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"jsx": "react-jsx",
+
+		/* Linting */
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"baseUrl": "./",
+		"paths": {
+			"@assets/*": ["src/assets/*"],
+			"@images/*": ["src/assets/images/*"],
+			"@icons/*": ["src/assets/icons/*"],
+			"@data/*": ["src/data/*"],
+			"@components/*": ["src/components/*"],
+			"@ui/*": ["src/components/ui/*"],
+			"@pages/*": ["src/pages/*"],
+			"@styles/*": ["src/styles/*"],
+			"@files/*": ["src/assets/files/*"],
+			"@videos/*": ["src/assets/videos/*"],
+			"@utils/*": ["src/utils/*"],
+			"@models/*": ["src/data/models/*"],
+			"@services/*": ["src/api/services/*"],
+			"@apiModels/*": ["src/api/models/*"],
+			"@store/*": ["src/store/*"]
+		}
+	},
+	"include": ["src"],
+	"references": [{ "path": "./tsconfig.node.json" }],
+	"exclude": ["node_modules", "typings"]
+}
