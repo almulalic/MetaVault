@@ -73,4 +73,11 @@ public class FileTreeController {
     public ResponseEntity bulkUpload() {
         return ResponseEntity.ok(fileTreeService.deleteAll());
     }
+
+    @RequestMapping(method = RequestMethod.GET, path = "/search")
+    public ResponseEntity<List<MetaFile>> search(
+      @RequestParam(required = false) String searchText
+    ) {
+        return ResponseEntity.ok(fileTreeService.search(searchText));
+    }
 }

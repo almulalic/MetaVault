@@ -1,41 +1,40 @@
-import { DateTime } from "luxon";
-import { AxiosResponse } from "axios";
-import { convertBytes, getMetafileIdFromUrl, getRowRange } from "@utils/utils";
+import { FileTreeViewDTO } from "@apiModels/FileTreeView";
+import { MetaFile } from "@apiModels/metafile";
+import AddDirectoryDialog from "@components/AddDirectoryDialog/AddDirectoryDialog";
+import PathBreadcrumb from "@components/Breadcrumb/Breadcrumb";
+import { FilesTable } from "@components/FilesTable/FilesTable";
+import Heading, { HeadingType } from "@components/Heading/Heading";
+import IconButton from "@elements/IconButton/IconButton";
+import { Checkbox } from "@elements/ui/checkbox";
+import {
+	CommandDialog,
+	CommandEmpty,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	CommandShortcut
+} from "@elements/ui/command";
+import { Toggle } from "@elements/ui/toggle";
+import { toast } from "@elements/ui/use-toast";
+import { FileTreeService } from "@services/FileTreeService";
+import { set_files_loading } from "@store/slice/fileTableSlice";
+import { set_details_expanded, set_manual_select_showed } from "@store/slice/userSlice";
+import { RootState } from "@store/store";
 import { ColumnDef, Row, Table } from "@tanstack/react-table";
-import { useEffect, useMemo, useState } from "react";
+import { convertBytes, getMetafileIdFromUrl } from "@utils/utils";
+import { AxiosResponse } from "axios";
 import {
 	FileTextIcon,
-	FolderCheck,
 	FolderIcon,
 	ListTodo,
 	PanelRightClose,
 	PanelRightOpen,
 	X
 } from "lucide-react";
-import PathBreadcrumb from "@components/Breadcrumb/Breadcrumb";
-import { FilesTable } from "@components/FilesTable/FilesTable";
-import { FileTreeService } from "../../api/services/FileTreeService";
-import AddDirectoryDialog from "@components/AddDirectoryDialog/AddDirectoryDialog";
-import { toast } from "@elements/ui/use-toast";
+import { DateTime } from "luxon";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@store/store";
-import {
-	set_current_metafile,
-	set_selection_state,
-	set_files_loading
-} from "@store/slice/fileTableSlice";
-import Heading, { HeadingType } from "@components/Heading/Heading";
-import IconButton from "@elements/IconButton/IconButton";
-import { MetaFile } from "@apiModels/metafile";
-import { FileTreeViewDTO } from "@apiModels/FileTreeView";
 import { useLocation, useParams } from "react-router-dom";
-import {
-	set_details_expanded,
-	set_manual_select_showed,
-	update_recent_files
-} from "@store/slice/userSlice";
-import { Checkbox } from "@elements/ui/checkbox";
-import { Toggle } from "@elements/ui/toggle";
 
 export const MyFiles = () => {
 	const { fileId } = useParams();
@@ -209,14 +208,51 @@ export const MyFiles = () => {
 					breadcrumbs.splice(index! + 1);
 					break;
 			}
+		}
+	}
 
-			setBreadcrumbs(breadcrumbs);
+	const [query, setQuery] = useState("");
+	const [searchResults, setSearchResults] = useState<SearchDTO[]>([]);
+
+	const handleSearch = async (searchQuery: any) => {
+		console.log("Searching for:", searchQuery);
+		const response: AxiosResponse<SearchDTO[]> = await FileTreeService.search(searchQuery);
+
+		if (!response) {
+			return;
 		}
 
-		dispatch(set_selection_state(null));
-		dispatch(update_recent_files(currentMetafile));
-		dispatch(set_current_metafile(currentMetafile));
+		if (response!.status === 200) {
+			console.log(response.data);
+			setSearchResults(response.data);
+		}
+	};
+
+	function debounce(
+		func: { (nextValue: any): Promise<void>; apply?: any },
+		delay: number | undefined
+	) {
+		let timeoutId: string | number | NodeJS.Timeout | undefined;
+		return function (...args: any) {
+			if (timeoutId) {
+				clearTimeout(timeoutId);
+			}
+			timeoutId = setTimeout(() => {
+				func.apply(this, args);
+			}, delay);
+		};
 	}
+
+	const debouncedSearch = useCallback(
+		debounce((nextValue: any) => handleSearch(nextValue), 1000),
+		[] // ensures debounce is not recreated on every render
+	);
+
+	const handleChange = (e: { target: { value: any } }) => {
+		const { value } = e.target;
+		setQuery(value);
+		debouncedSearch(value);
+	};
 
 	const onRowBack = () => {
 		if (currentMetafile?.name !== "root") {
@@ -244,10 +280,32 @@ export const MyFiles = () => {
 	function handleManualSelect(state: boolean) {
 		if (state) {
 		} else {
+			alert("Opening preview for: ");
 		}
 
 		dispatch(set_manual_select_showed(state));
 	}
+
+	const [open, setOpen] = useState(false);
+	// const [inputValue, setInputValue] = React.useState("");
+
+	useEffect(() => {
+		const down = (e: KeyboardEvent) => {
+			if (e.key === "j" && (e.metaKey || e.ctrlKey)) {
+				e.preventDefault();
+				setOpen((open) => !open);
+			}
+		};
+
+		document.addEventListener("keydown", down);
+		return () => document.removeEventListener("keydown", down);
+	}, []);
+
+	// const handleValueChange = (value: string) => {
+	// 	setInputValue(value);
+	// 	setOpen(!!value);
+	// };
+	const breadcrumbz: string[] = ["zendrive", "zendrive-api", "src", "main", "resources"];
 
 	return (
 		<div className="relative flex justify-between gap-8 w-full h-screen overflow-hidden mt-4">
@@ -263,6 +321,27 @@ export const MyFiles = () => {
 					<Heading type={HeadingType.THREE} className="whitespace-nowrap">
 						My Files
 					</Heading>
+
+					<CommandDialog open={open} onOpenChange={setOpen}>
+						<CommandInput placeholder="Type a command or search..." onInput={handleChange} />
+						<CommandList>
+							{searchResults.length > 0 ? (
+								searchResults.map((result: SearchDTO) => (
+									<CommandItem
+										key={result.id}
+										id={result.id}
+										onSelect={(value) => console.log("Selected", value)}
+									>
+										<FileTextIcon className="mr-2 h-4 w-4" />
+										<span>{result.name}</span>
+										<CommandShortcut>{result.breadcrumbs.join("/")}</CommandShortcut>
+									</CommandItem>
+								))
+							) : (
+								<CommandEmpty>No results found.</CommandEmpty>
+							)}
+						</CommandList>
+					</CommandDialog>
 
 					<div className="flex items-center justify-end gap-2 w-full">
 						<AddDirectoryDialog />

@@ -19,4 +19,7 @@ export class FileTreeService {
 	static async delete(id: string): Promise<AxiosResponse> {
 		return authorizedAxiosApp.delete(`file/delete/${id}`);
 	}
+	static async search(searchText: string): Promise<AxiosResponse<SearchDTO[]>> {
+		return authorizedAxiosApp.get(`file/search?searchText=${searchText}`);
+	}
 }

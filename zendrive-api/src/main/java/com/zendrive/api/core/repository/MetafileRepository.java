@@ -27,6 +27,12 @@ public interface MetafileRepository extends ElasticsearchRepository<MetaFile, St
     @Query("{\"bool\":{\"must\":[{\"match\":{\"name\":\"root\"}}]}}")
     MetaFile getRootNode();
 
+    // Instead of doing full text search, allow partial/fuzzy search without wildcards
+//    @Query("{\"bool\":{\"must\":[{\"match\":{\"name\":{\"query\":\"?0\", \"fuzziness\":\"AUTO\"}}}]}}")
+    //    @Query("{\"bool\":{\"must\":[{\"match\":{\"name\":\"?0\"}}]}}")
+    @Query("{\"bool\":{\"must\":[{\"query_string\":{\"default_field\":\"name\",\"query\":\"*?0*\"}}]}}")
+    List<MetaFile> search(String searchText);
+
     @Modifying
     void deleteAllByIdIn(List<String> ids);
 }

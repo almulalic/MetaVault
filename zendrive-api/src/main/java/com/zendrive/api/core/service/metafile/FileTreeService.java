@@ -117,4 +117,8 @@ public class FileTreeService {
 
         return 0;
     }
+
+    public List<MetaFile> search(String searchText) {
+        return metafileRepository.search(searchText);
+    }
 }
