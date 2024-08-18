@@ -25,6 +25,7 @@
 			"@images/*": ["src/assets/images/*"],
 			"@icons/*": ["src/assets/icons/*"],
 			"@data/*": ["src/data/*"],
+			"@elements/*": ["src/elements/*"],
 			"@components/*": ["src/components/*"],
 			"@ui/*": ["src/components/ui/*"],
 			"@pages/*": ["src/pages/*"],
@@ -35,7 +36,8 @@
 			"@models/*": ["src/data/models/*"],
 			"@services/*": ["src/api/services/*"],
 			"@apiModels/*": ["src/api/models/*"],
-			"@store/*": ["src/store/*"]
+			"@store/*": ["src/store/*"],
+			"@constants/*": ["src/constants/*"]
 		}
 	},
 	"include": ["src"],

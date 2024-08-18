@@ -1,20 +1,11 @@
 import Heading, { HeadingType } from "@components/Heading/Heading";
-import { RootState } from "../../../store/index";
 import { useSelector } from "react-redux";
-import { Separator } from "@components/ui/separator";
-import { StorageType } from "../../../store/addDirectorySlice";
-// import { Progress } from "@components/ui/progress";
-// import { useEffect, useState } from "react";
+import { Separator } from "@elements/ui/separator";
+import { StorageTypeInput } from "@store/slice/addDirectorySlice";
+import { RootState } from "@store/store";
 
 export function FinalizeStep() {
-	// const [progress, setProgress] = useState(0);
-
-	// useEffect(() => {
-	// 	const timer = setTimeout(() => setProgress(100), 1000);
-	// 	return () => clearTimeout(timer);
-	// }, []);
-
-	const { path, storageType, permissions } = useSelector((state: RootState) => state.addDirectory);
+	const { config, permissions } = useSelector((state: RootState) => state.addDirectory);
 
 	return (
 		<div className="flex flex-col gap-4 ">
@@ -30,12 +21,12 @@ export function FinalizeStep() {
 			<div className="flex flex-col gap-3 text-gray-300">
 				<div className="flex items-center gap-2">
 					<span className="font-medium text-gray-100">Path:</span>
-					<span>{path}</span>
+					<span>{config.inputPath}</span>
 				</div>
 
 				<div className="flex items-center gap-2">
 					<span className="font-medium text-gray-100">Storage Type:</span>
-					<span>{StorageType[storageType]}</span>
+					<span>{StorageTypeInput[config.storageType!]}</span>
 				</div>
 
 				<div className="flex items-center gap-2">
@@ -51,6 +42,11 @@ export function FinalizeStep() {
 				<div className="flex items-center gap-2">
 					<span className="font-medium text-gray-100">Execute Permissions:</span>
 					<span>{permissions.execute.join(", ")}</span>
+				</div>
+
+				<div className="flex items-center gap-2">
+					<span className="font-medium text-gray-100">Sync:</span>
+					<span>{config.sync ? "True" : "False"}</span>
 				</div>
 			</div>
 		</div>

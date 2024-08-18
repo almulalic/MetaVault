@@ -1,9 +1,14 @@
 import { AxiosResponse } from "axios";
 import { authorizedAxiosApp, publicAxiosApp } from "./Axios";
 import { createSearchParams } from "react-router-dom";
+import { GenerateTokenResponse } from "@apiModels/auth/dto/GenerateTokenResponse";
 
 export class AuthAPIService {
-	static async login(email: string, password: string, rememberMe: boolean): Promise<AxiosResponse> {
+	static async login(
+		email: string,
+		password: string,
+		rememberMe: boolean
+	): Promise<AxiosResponse<GenerateTokenResponse>> {
 		return publicAxiosApp.post("/auth/token/generate", {
 			email: email,
 			password: password,

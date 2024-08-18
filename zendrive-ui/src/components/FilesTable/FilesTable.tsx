@@ -1,23 +1,39 @@
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow
-} from "@components/ui/table";
+	ColumnDef,
+	flexRender,
+	getCoreRowModel,
+	Row,
+	Table as ITable,
+	useReactTable
+} from "@tanstack/react-table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@elements/ui/table";
 import RowContextMenu from "./components/contextMenu/RowContextMenu";
+import { getRowRange } from "@utils/utils";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@store/store";
+import {
+	set_current_as_selected,
+	set_selection_state,
+	set_selected_metafiles,
+	set_active_metafile,
+	SelectionState
+} from "@store/slice/fileTableSlice";
+import { useEffect, useRef } from "react";
+import { MetaFile } from "@apiModels/metafile";
+import { useNavigate } from "react-router-dom";
+import TableRowSkeleton from "./components/skeleton/TableRowSkeleton";
+import PreviousTableRow from "./components/cell/PreviousTableRow";
 
-interface DataTableProps {
+export interface DataTableProps {
 	columns: ColumnDef<MetaFile, MetaFile>[];
 	data: MetaFile[];
-	onRowClick: (a: any) => any;
+	onRowClick: (table: ITable<MetaFile>, row: Row<MetaFile> | null, metafile: any) => any;
+	onRowBack: () => void;
 	isLoading: boolean;
 }
 
-export function FilesTable({ columns, data, onRowClick, isLoading }: DataTableProps) {
-	const table = useReactTable({
+export function FilesTable({ columns, data, onRowBack, isLoading }: DataTableProps) {
+	const table: ITable<MetaFile> = useReactTable({
 		data,
 		columns,
 		getCoreRowModel: getCoreRowModel(),
@@ -26,10 +42,77 @@ export function FilesTable({ columns, data, onRowClick, isLoading }: DataTablePr
 		}
 	});
 
+	const dispatch = useDispatch();
+	const { selectionState, selectedMetafiles, activeMetafile } = useSelector(
+		(state: RootState) => state.fileTable
+	);
+
+	const { manualSelectShown } = useSelector((state: RootState) => state.user);
+
+	const tableRef = useRef<HTMLDivElement>(null);
+
+	function onRowSelect(e: React.MouseEvent, row: Row<MetaFile>) {
+		const { rows } = table.getRowModel();
+
+		if (e.shiftKey) {
+			if (!selectionState) {
+				return;
+			}
+
+			if (manualSelectShown) {
+				if (row.getIsSelected()) {
+					dispatch(set_selected_metafiles(selectedMetafiles.filter((x) => x.id !== row.id)));
+				} else {
+					dispatch(set_selected_metafiles([...selectedMetafiles, row.original]));
+				}
+
+				row.toggleSelected(!row.getIsSelected());
+				return;
+			}
+
+			try {
+				const [rowsToSelect, newSelectionState]: [Row<MetaFile>[], SelectionState] =
+					getRowRange<MetaFile>(rows, selectionState, row.index);
+
+				const selectedIds = rowsToSelect.map((x) => x.index);
+
+				rows
+					.filter((x) => !selectedIds.includes(x.index))
+					.forEach((row) => row.toggleSelected(false));
+
+				rowsToSelect.forEach((row) => row.toggleSelected(true));
+
+				dispatch(set_selected_metafiles(rowsToSelect.map((x) => x.original)));
+				dispatch(set_selection_state(newSelectionState));
+			} catch (e) {
+				console.log(e);
+				table.toggleAllPageRowsSelected(false);
+				row.toggleSelected(!row.getIsSelected());
+			}
+		} else {
+			table.toggleAllPageRowsSelected(false);
+			row.toggleSelected(true);
+			dispatch(set_selected_metafiles([row.original]));
+			dispatch(set_active_metafile(row.original));
+			dispatch(set_selection_state({ start: row.index, end: row.index }));
+		}
+	}
+
+	const navigate = useNavigate();
+
+	const onRowDeselect = () => {
+		table.toggleAllPageRowsSelected(false);
+		dispatch(set_current_as_selected());
+	};
+
+	useEffect(() => {
+		table.getColumn("manualSelect")?.toggleVisibility(manualSelectShown);
+	}, [manualSelectShown]);
+
 	return (
-		<div className="rounded-md border">
+		<div className="rounded-md border" ref={tableRef}>
 			<Table>
-				<TableHeader>
+				<TableHeader onClick={() => onRowDeselect()}>
 					{table.getHeaderGroups().map((headerGroup) => (
 						<TableRow key={headerGroup.id}>
 							{headerGroup.headers.map((header) => {
@@ -46,31 +129,34 @@ export function FilesTable({ columns, data, onRowClick, isLoading }: DataTablePr
 				</TableHeader>
 				<TableBody>
 					{isLoading ? (
-						<TableRow>
-							<TableCell colSpan={columns.length} className="h-24 text-center">
-								Loading...
-							</TableCell>
-						</TableRow>
+						[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((x) => (
+							<TableRowSkeleton id={x} key={x} table={table} />
+						))
 					) : (
 						<>
-							<TableRow
-								className="w-full cursor-pointer"
-								onClick={() => onRowClick({ type: "directory", name: ".." })}
-								onMouseDown={(e) => {
-									e.preventDefault();
-								}}
-							>
-								<TableCell colSpan={100}>..</TableCell>
-							</TableRow>
+							<PreviousTableRow onRowBack={onRowBack} onRowDeselect={onRowDeselect} />
 
 							{table.getRowModel().rows?.length ? (
 								table.getRowModel().rows.map((row) => (
-									<RowContextMenu rowData={row}>
+									<RowContextMenu rowData={row} key={row.id}>
 										<TableRow
-											key={row.id}
+											className="cursor-pointer select-none"
 											data-state={row.getIsSelected() && "selected"}
-											onClick={() => row.toggleSelected()}
-											onDoubleClick={() => onRowClick(row.original)}
+											onClick={(e) => onRowSelect(e, row)}
+											onDoubleClick={(e) => {
+												if (selectedMetafiles.length <= 1 && !e.shiftKey) {
+													table.toggleAllPageRowsSelected(false);
+													navigate(`/files/file/${row.original.id}`);
+												}
+											}}
+											onContextMenu={(e) => {
+												if (
+													selectedMetafiles.length <= 1 &&
+													!selectedMetafiles.some((x) => x.id === row.original.id)
+												) {
+													onRowSelect(e, row);
+												}
+											}}
 										>
 											{row.getVisibleCells().map((cell) => (
 												<TableCell key={cell.id}>

@@ -1,21 +1,18 @@
-import { CSSProperties, useEffect, useState } from "react";
-import { parseStyles } from "./utils";
-import { CSSStyle } from "@data/models";
+import { RefObject, useEffect } from "react";
 
-export const useStyleResizeHandler = (style: CSSStyle): CSSProperties | Object => {
-	const [parsedStyles, setParsedStyles] = useState({});
-
+export function useClickawayListener(
+	ref: RefObject<HTMLElement>,
+	handler: (event?: MouseEvent) => any
+) {
 	useEffect(() => {
-		const handleResize = () => {
-			setParsedStyles(parseStyles(style));
-		};
-
-		window.addEventListener("resize", handleResize);
-
+		function handleClickOutside(event: MouseEvent) {
+			if (ref.current && !ref.current.contains(event.target as Node)) {
+				handler(event);
+			}
+		}
+		document.addEventListener("mousedown", handleClickOutside);
 		return () => {
-			window.removeEventListener("resize", handleResize);
+			document.removeEventListener("mousedown", handleClickOutside);
 		};
-	}, [style]);
-
-	return parsedStyles;
-};
+	}, [ref]);
+}

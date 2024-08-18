@@ -1,5 +1,6 @@
 import { AxiosResponse } from "axios";
 import { authorizedAxiosApp } from "./Axios";
+import { MetaFile } from "@apiModels/metafile";
 import { LocalScanDto } from "@apiModels/scan/local/LocalScanDto";
 
 export class LocalScanService {

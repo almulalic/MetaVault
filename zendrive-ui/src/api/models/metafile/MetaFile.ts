@@ -1,9 +1,10 @@
-class MetaFile {
+export class MetaFile {
 	id: string;
 	name: string;
 	size: number;
 	createdDate: string;
-	lastModifiedDate: number;
+	lastModifiedMs: number;
+	lastSyncMs: number;
 	blobPath: string;
 	contentSize: number;
 	previous: string;
@@ -15,7 +16,8 @@ class MetaFile {
 		name: string,
 		size: number,
 		createdDate: string,
-		lastModifiedDate: number,
+		lastModifiedMs: number,
+		lastSyncMs: number,
 		blobPath: string,
 		contentSize: number,
 		previous: string,
@@ -28,7 +30,8 @@ class MetaFile {
 		this.createdDate = createdDate;
 		this.blobPath = blobPath;
 		this.contentSize = contentSize;
-		this.lastModifiedDate = lastModifiedDate;
+		this.lastModifiedMs = lastModifiedMs;
+		this.lastSyncMs = lastSyncMs;
 		this.previous = previous;
 		this.children = children;
 		this.permissions = permissions;

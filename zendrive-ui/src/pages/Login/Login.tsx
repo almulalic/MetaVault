@@ -1,30 +1,21 @@
-import { useState } from "react";
 import { AxiosResponse } from "axios";
 import { useNavigate } from "react-router-dom";
 import { AuthAPIService } from "../../api/services";
-import { AppDispatch, RootState } from "../../store";
 import { useDispatch, useSelector } from "react-redux";
-import { login_attempt, login_failed, login_sucessfull } from "../../store/authSlice";
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage
-} from "@components/ui/form";
-import { Button } from "@components/ui/button";
-import { Input } from "@components/ui/input";
-import { Checkbox } from "@components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@elements/ui/form";
+import { Button } from "@elements/ui/button";
+import { Input } from "@elements/ui/input";
+import { Checkbox } from "@elements/ui/checkbox";
 import { ReloadIcon } from "@radix-ui/react-icons";
+import { GoogleButton } from "@components/GoogleButton/GoogleButton";
+import { AppDispatch, RootState } from "@store/store";
+import { login_attempt, login_failed, login_sucessfull } from "@store/slice/authSlice";
 
 import "./Login.scss";
-import { GoogleButton } from "@components/GoogleButton/GoogleButton";
 
 export type LoginFormData = {
 	email: string;

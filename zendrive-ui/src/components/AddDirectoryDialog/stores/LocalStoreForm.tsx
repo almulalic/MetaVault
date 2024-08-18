@@ -1,4 +1,3 @@
-import { Checkbox } from "@components/ui/checkbox";
 import {
 	Form,
 	FormControl,
@@ -7,16 +6,10 @@ import {
 	FormItem,
 	FormLabel,
 	FormMessage
-} from "@components/ui/form";
-import { Input } from "@components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue
-} from "@components/ui/select";
-import { useToast } from "@components/ui/use-toast";
+} from "@elements/ui/form";
+import { Input } from "@elements/ui/input";
+
+import { useToast } from "@elements/ui/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LocalScanService } from "@services/LocalScanService";
 import { AxiosResponse } from "axios";
@@ -26,15 +19,16 @@ import { z } from "zod";
 import Heading from "@components/Heading/Heading";
 import { HeadingType } from "../../Heading/Heading";
 import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "../../../store";
 import {
 	next_step,
-	set_loading,
+	set_add_form_loading,
 	set_path,
 	set_scan_check_response
-} from "../../../store/addDirectorySlice";
-import { MetafilePermissions } from "@apiModels/Permissions";
-import { Separator } from "@components/ui/separator";
+} from "@store/slice/addDirectorySlice";
+import { MetafilePermissions } from "@apiModels/metafile/MetafilePermissions";
+import { Separator } from "@elements/ui/separator";
+import { MetafileConfig } from "@apiModels/metafile";
+import { AppDispatch, RootState } from "@store/store";
 
 export interface LocalStoreFormProps {
 	submitRef: MutableRefObject<any>;
@@ -44,43 +38,28 @@ export function LocalStoreForm({ submitRef }: LocalStoreFormProps) {
 	const { toast } = useToast();
 
 	const dispatch = useDispatch<AppDispatch>();
-	const { isLoading, path } = useSelector((state: RootState) => state.addDirectory);
+	const { isLoading, config } = useSelector((state: RootState) => state.addDirectory);
 
 	const FormSchema = z.object({
 		absolutePath: z.string().min(2, {
 			message: "Absolute path must be at least 2 characters."
-		}),
-		sync: z.boolean().default(false).optional(),
-		syncPeriod: z
-			.string()
-			.optional()
-			.superRefine((data, ctx) => {
-				// if (data && data.sync && !data.syncPeriod) {
-				// 	ctx.addIssue({
-				// 		code: z.ZodIssueCode.custom,
-				// 		path: ["syncPeriod"],
-				// 		message: "Sync period is required when sync is enabled."
-				// 	});
-				// }
-			})
+		})
 	});
 
 	const form = useForm<z.infer<typeof FormSchema>>({
 		resolver: zodResolver(FormSchema),
 		defaultValues: {
-			absolutePath: path || "",
-			sync: false,
-			syncPeriod: ""
+			absolutePath: config.inputPath || ""
 		}
 	});
 
 	async function onSubmit(data: z.infer<typeof FormSchema>) {
-		dispatch(set_loading(true));
+		dispatch(set_add_form_loading(true));
 
 		const checkResponse: AxiosResponse<ScanCheckResponse> = await LocalScanService.check({
-			path: data.absolutePath,
 			destinationId: "",
-			permissions: new MetafilePermissions([], [], [])
+			permissions: new MetafilePermissions([], [], []),
+			config: new MetafileConfig(false, data.absolutePath, null)
 		});
 
 		if (checkResponse.status !== 200) {
@@ -88,7 +67,7 @@ export function LocalStoreForm({ submitRef }: LocalStoreFormProps) {
 				title: "An unexpected error has occured!"
 			});
 
-			dispatch(set_loading(false));
+			dispatch(set_add_form_loading(false));
 			return;
 		}
 
@@ -97,11 +76,12 @@ export function LocalStoreForm({ submitRef }: LocalStoreFormProps) {
 				title: checkResponse.data.errorMessage
 			});
 
-			dispatch(set_loading(false));
+			dispatch(set_add_form_loading(false));
+
 			return;
 		}
 
-		dispatch(set_loading(false));
+		dispatch(set_add_form_loading(false));
 		dispatch(set_path(data.absolutePath));
 		dispatch(set_scan_check_response(checkResponse.data));
 		dispatch(next_step());
@@ -125,15 +105,12 @@ export function LocalStoreForm({ submitRef }: LocalStoreFormProps) {
 						control={form.control}
 						name="absolutePath"
 						disabled={isLoading}
+						defaultValue=""
 						render={({ field }) => (
 							<FormItem>
 								<FormLabel>Absolute Path</FormLabel>
 								<FormControl>
-									<Input
-										placeholder="/mnt/drive/path/to/directory"
-										{...field}
-										defaultValue={"almir"}
-									/>
+									<Input placeholder="/mnt/drive/path/to/directory" {...field} />
 								</FormControl>
 								<FormDescription>
 									Absolute path to the directory. Make sure that this path never changes.
@@ -142,65 +119,6 @@ export function LocalStoreForm({ submitRef }: LocalStoreFormProps) {
 							</FormItem>
 						)}
 					/>
-					{/* 
-					<FormField
-						control={form.control}
-						disabled={isLoading}
-						name="sync"
-						render={({ field }) => (
-							<FormItem className="flex flex-row items-start space-x-3 space-y-0">
-								<FormControl>
-									<Checkbox
-										disabled={field.disabled}
-										checked={field.value}
-										onCheckedChange={field.onChange}
-									/>
-								</FormControl>
-								<div className="space-y-1 leading-none">
-									<FormLabel>Automatic Sync</FormLabel>
-									<FormDescription>
-										Automatically sync the underlying changes on a specified schedule.
-									</FormDescription>
-								</div>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-
-					{form.getValues("sync") && (
-						<div className="ml-4">
-							<FormField
-								control={form.control}
-								name="syncPeriod"
-								disabled={isLoading}
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Sync Period</FormLabel>
-										<Select
-											disabled={field.disabled}
-											onValueChange={field.onChange}
-											defaultValue={field.value}
-										>
-											<FormControl>
-												<SelectTrigger>
-													<SelectValue placeholder="Select a time period" />
-												</SelectTrigger>
-											</FormControl>
-
-											<SelectContent>
-												<SelectItem value="hour">Hourly</SelectItem>
-												<SelectItem value="day">Daily</SelectItem>
-												<SelectItem value="month">Monthly</SelectItem>
-												<SelectItem value="year">Yearly</SelectItem>
-											</SelectContent>
-										</Select>
-										<FormDescription>Choose the time period for syncing changes.</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						</div>
-					)} */}
 
 					<input type="submit" hidden ref={submitRef} />
 				</form>

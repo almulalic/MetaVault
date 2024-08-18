@@ -13,6 +13,7 @@ export default defineConfig({
 			"@assets": path.resolve(__dirname, "src/assets/"),
 			"@images": path.resolve(__dirname, "src/assets/images/"),
 			"@icons": path.resolve(__dirname, "src/assets/icons/"),
+			"@elements": path.resolve(__dirname, "src/elements/"),
 			"@components": path.resolve(__dirname, "src/components/"),
 			"@pages": path.resolve(__dirname, "src/pages/"),
 			"@styles": path.resolve(__dirname, "src/styles/"),
@@ -22,7 +23,8 @@ export default defineConfig({
 			"@models": path.resolve(__dirname, "data/models/"),
 			"@services": path.resolve(__dirname, "src/api/services"),
 			"@apiModels": path.resolve(__dirname, "src/api/models"),
-			"@store": path.resolve(__dirname, "src/api/store")
+			"@store": path.resolve(__dirname, "src/store"),
+			"@constants": path.resolve(__dirname, "src/constants")
 		}
 	}
 });

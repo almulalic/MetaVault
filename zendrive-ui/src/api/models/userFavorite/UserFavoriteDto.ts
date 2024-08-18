@@ -1,7 +1,7 @@
 export class UserFavoriteDto {
-	metafileId: string;
+	metafiles: string[];
 
-	constructor(metafileId: string) {
-		this.metafileId = metafileId;
+	constructor(metafiles: string[]) {
+		this.metafiles = metafiles;
 	}
 }

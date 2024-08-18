@@ -1,11 +1,11 @@
-import { Component, Fragment } from "react";
+import { Fragment } from "react";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
 	BreadcrumbLink,
 	BreadcrumbList,
 	BreadcrumbSeparator
-} from "../ui/breadcrumb";
+} from "@elements/ui/breadcrumb";
 
 export interface PathBreadcrumb {
 	label: string;

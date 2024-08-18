@@ -1,6 +1,7 @@
 import axios, { Axios } from "axios";
 import { AuthAPIService } from ".";
-import { ACCESS_TOKEN_NAME, BASE_API_URL, REFRESH_TOKEN_NAME } from "../../constants";
+import { BASE_API_URL, LOCAL_STORAGE } from "@constants/constants";
+import { getLocalStorageItem } from "@utils/utils";
 
 export const publicAxiosApp = axios.create({
 	baseURL: BASE_API_URL,
@@ -18,7 +19,7 @@ attachRefreshLogic(authorizedAxiosApp);
 
 function attachTokenLogic(app: Axios) {
 	app.interceptors.request.use(async (config) => {
-		const accessToken = localStorage.getItem(ACCESS_TOKEN_NAME);
+		const accessToken = getLocalStorageItem(LOCAL_STORAGE.ACCESS_TOKEN_KEY);
 
 		if (accessToken) {
 			const token = `Bearer ${accessToken}`;
@@ -41,8 +42,8 @@ function attachRefreshLogic(app: Axios) {
 				if (error.response.data == "JWT Expired!") {
 					originalRequest._retry = true;
 
-					let accessToken: string | null = localStorage.getItem(ACCESS_TOKEN_NAME);
-					let refreshToken: string | null = localStorage.getItem(REFRESH_TOKEN_NAME);
+					let accessToken: string | null = getLocalStorageItem(LOCAL_STORAGE.ACCESS_TOKEN_KEY);
+					let refreshToken: string | null = getLocalStorageItem(LOCAL_STORAGE.REFRESH_TOKEN_KEY);
 
 					if (accessToken && refreshToken) {
 						let refreshResponse = await AuthAPIService.refreshToken(accessToken, refreshToken);
@@ -51,7 +52,10 @@ function attachRefreshLogic(app: Axios) {
 							originalRequest.headers[
 								"Authorization"
 							] = `Bearer ${refreshResponse.data.accessToken}`;
-							localStorage.setItem(ACCESS_TOKEN_NAME, refreshResponse.data.accessToken);
+							localStorage.setItem(
+								LOCAL_STORAGE.ACCESS_TOKEN_KEY,
+								refreshResponse.data.accessToken
+							);
 
 							return axios(originalRequest);
 						} else {

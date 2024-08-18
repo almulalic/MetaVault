@@ -4,10 +4,10 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { CheckIcon, XCircle, ChevronDown, XIcon, WandSparkles } from "lucide-react";
 
-import { Separator } from "@components/ui/separator";
-import { Button } from "@components/ui/button";
-import { Badge } from "@components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover";
+import { Separator } from "@elements/ui/separator";
+import { Button } from "@elements/ui/button";
+import { Badge } from "@elements/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@elements/ui/popover";
 import {
 	Command,
 	CommandEmpty,
@@ -16,7 +16,7 @@ import {
 	CommandItem,
 	CommandList,
 	CommandSeparator
-} from "@components/ui/command";
+} from "@elements/ui/command";
 import { cn } from "@utils/utils";
 
 /**

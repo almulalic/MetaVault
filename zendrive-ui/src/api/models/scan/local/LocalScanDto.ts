@@ -1,13 +1,14 @@
-import { MetafilePermissions } from "@apiModels/Permissions";
+import { MetafileConfig } from "@apiModels/metafile";
+import { MetafilePermissions } from "@apiModels/metafile/MetafilePermissions";
 
 export class LocalScanDto {
-	path: string;
 	destinationId?: string;
 	permissions: MetafilePermissions;
+	config: MetafileConfig;
 
-	constructor(path: string, destinationId: string, permissions: MetafilePermissions) {
-		this.path = path;
+	constructor(destinationId: string, permissions: MetafilePermissions, config: MetafileConfig) {
 		this.destinationId = destinationId;
 		this.permissions = permissions;
+		this.config = config;
 	}
 }

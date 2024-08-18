@@ -1,19 +1,20 @@
-import { UserFavorite } from "@apiModels/userFavorite/UserFavorite";
 import {
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuItem,
 	ContextMenuTrigger
-} from "@components/ui/context-menu";
+} from "@elements/ui/context-menu";
+import { UserFavoriteView } from "@apiModels/userFavorite/UserFavoriteView";
 import { UserFavoriteService } from "@services/UserFavoriteService";
-import { set_user_favorites } from "../../../../store/authSlice";
-import { RootState } from "../../../../store";
 import { Row } from "@tanstack/react-table";
 import { AxiosResponse } from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { ReactNode, useState } from "react";
 import { DeleteMetafileDialog } from "./DeleteMetafileDialog";
-import { Star, StarOff, Trash2 } from "lucide-react";
+import { FolderSync, Info, Star, StarOff, Trash2 } from "lucide-react";
+import { MetaFile } from "@apiModels/metafile";
+import { set_user_favorites, set_details_expanded } from "@store/slice/userSlice";
+import { RootState } from "@store/store";
 
 export interface RowContextMenuProps {
 	rowData: Row<MetaFile>;
@@ -22,33 +23,40 @@ export interface RowContextMenuProps {
 
 export default function RowContextMenu({ rowData, children }: RowContextMenuProps) {
 	const dispatch = useDispatch();
-	const { userInfo } = useSelector((state: RootState) => state.auth);
+	const { favorites } = useSelector((state: RootState) => state.user);
+	const { selectedMetafiles } = useSelector((state: RootState) => state.fileTable);
 
-	async function addToFavorites(metafileId: string) {
-		const response: AxiosResponse<UserFavorite> = await UserFavoriteService.add({
-			metafileId: metafileId
+	async function addToFavorites(metafiles: string[]) {
+		const response: AxiosResponse<UserFavoriteView[]> = await UserFavoriteService.add({
+			metafiles: metafiles
 		});
 
 		if (response.status === 200) {
-			dispatch(set_user_favorites([...userInfo?.favorites!, response.data]));
+			dispatch(set_user_favorites([...favorites, ...response.data]));
 		}
 	}
 
-	async function removeFromFavorites(metafileId: string) {
-		const response: AxiosResponse<UserFavorite> = await UserFavoriteService.remove({
-			metafileId: metafileId
+	async function removeFromFavorites(metafiles: string[]) {
+		const response: AxiosResponse<UserFavoriteView[]> = await UserFavoriteService.remove({
+			metafiles: metafiles
 		});
 
 		if (response.status === 200) {
-			dispatch(set_user_favorites(userInfo?.favorites.filter((x) => x.metafile.id !== metafileId)));
+			const deletedIds = response.data.map((x) => x.metafileView.id);
+
+			dispatch(
+				set_user_favorites(favorites.filter((x) => !deletedIds.includes(x.metafileView.id)))
+			);
 		}
 	}
 
 	async function handleFavorite() {
-		if (userInfo?.favorites.some((x) => x.metafile.id === rowData.original.id)) {
-			removeFromFavorites(rowData.original.id);
+		const favoriteIds = favorites.map((x) => x.metafileView.id);
+
+		if (selectedMetafiles.every((x) => favoriteIds.includes(x.id))) {
+			removeFromFavorites(selectedMetafiles.map((x) => x.id));
 		} else {
-			addToFavorites(rowData.original.id);
+			addToFavorites(selectedMetafiles.map((x) => x.id));
 		}
 	}
 
@@ -58,24 +66,42 @@ export default function RowContextMenu({ rowData, children }: RowContextMenuProp
 		setDeleteDialogOpen(open);
 	}
 
+	function handleDetailsClick() {
+		dispatch(set_details_expanded(true));
+	}
+
 	return (
 		<>
 			<ContextMenu>
-				<ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+				<ContextMenuTrigger asChild onClick={(e) => e.preventDefault()}>
+					{children}
+				</ContextMenuTrigger>
 
 				<ContextMenuContent>
-					<ContextMenuItem onClick={handleFavorite}>
-						{userInfo?.favorites.some((x) => x.metafile.id === rowData.original.id) ? (
-							<span className="inline-flex justify-center items-center cursor-pointer">
+					<ContextMenuItem onClick={handleDetailsClick} className="cursor-pointer">
+						<span className="inline-flex justify-center items-center">
+							<FolderSync size="16px" className="mr-1" />
+							Sync
+						</span>
+					</ContextMenuItem>
+					<ContextMenuItem onClick={handleFavorite} className="cursor-pointer">
+						{favorites.some((x) => x.metafileView.id === rowData.original.id) ? (
+							<span className="inline-flex justify-center items-center">
 								<StarOff size="16px" className="mr-1" /> Unfavorite
 							</span>
 						) : (
-							<span className="inline-flex justify-center items-center cursor-pointer">
+							<span className="inline-flex justify-center items-center">
 								<Star size="16px" className="mr-1 " /> Favorite
 							</span>
 						)}
 					</ContextMenuItem>
-					<ContextMenuItem onClick={() => handleDeleteDialogOpen(true)}>
+					<ContextMenuItem onClick={handleDetailsClick} className="cursor-pointer">
+						<span className="inline-flex justify-center items-center">
+							<Info size="16px" className="mr-1" />
+							Details
+						</span>
+					</ContextMenuItem>
+					<ContextMenuItem onClick={() => handleDeleteDialogOpen(true)} className="cursor-pointer">
 						<span className="inline-flex justify-center items-center cursor-pointer">
 							<Trash2 size="16px" className="mr-1" />
 							Delete
@@ -84,11 +110,7 @@ export default function RowContextMenu({ rowData, children }: RowContextMenuProp
 				</ContextMenuContent>
 			</ContextMenu>
 
-			<DeleteMetafileDialog
-				open={isDeleteDialogOpen}
-				onOpenChange={handleDeleteDialogOpen}
-				metafile={rowData.original}
-			/>
+			<DeleteMetafileDialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogOpen} />
 		</>
 	);
 }

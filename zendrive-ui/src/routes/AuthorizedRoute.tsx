@@ -1,9 +1,9 @@
 import { Login } from "../pages";
 import { ReactElement } from "react";
-import { RootState } from "../store";
+import { RootState } from "@store/store";
 import { useSelector } from "react-redux";
 import { Role } from "src/api/models/auth/Role";
-import { APP_NAME } from "../constants";
+import { APP_NAME } from "../constants/constants";
 
 interface ICustomRouteProps {
 	permissions: Role[];

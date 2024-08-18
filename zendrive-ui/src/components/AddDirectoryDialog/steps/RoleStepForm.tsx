@@ -1,4 +1,4 @@
-import { RootState } from "../../../store";
+import { RootState } from "@store/store";
 import { useDispatch, useSelector } from "react-redux";
 import Heading, { HeadingType } from "@components/Heading/Heading";
 import {
@@ -8,22 +8,21 @@ import {
 	FormItem,
 	FormLabel,
 	FormMessage
-} from "@components/ui/form";
+} from "@elements/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
-import { MultiSelect } from "@components/ui/multi-select";
+import { MultiSelect } from "@elements/ui/multi-select";
 import { MutableRefObject, useEffect, useState } from "react";
 import {
-	change_permissions,
 	next_step,
-	set_loading,
-	set_selected_permissions
-} from "../../../store/addDirectorySlice";
+	set_add_form_loading,
+	change_permissions
+} from "@store/slice/addDirectorySlice";
 import { AxiosResponse } from "axios";
 import { RoleService } from "@services/RoleService";
 import { Role } from "@apiModels/auth/Role";
-import { Separator } from "@components/ui/separator";
+import { Separator } from "@elements/ui/separator";
 
 export interface RoleStepFormProps {
 	submitRef: MutableRefObject<any>;
@@ -31,9 +30,7 @@ export interface RoleStepFormProps {
 
 export function RoleStepForm({ submitRef }: RoleStepFormProps) {
 	const dispatch = useDispatch();
-	const { permissions, selectedPermissions } = useSelector(
-		(state: RootState) => state.addDirectory
-	);
+	const { permissions } = useSelector((state: RootState) => state.addDirectory);
 
 	const FormSchema = z.object({
 		read: z.array(z.string()).min(1, {
@@ -48,9 +45,9 @@ export function RoleStepForm({ submitRef }: RoleStepFormProps) {
 	const form = useForm<z.infer<typeof FormSchema>>({
 		resolver: zodResolver(FormSchema),
 		defaultValues: {
-			read: selectedPermissions.read,
-			write: selectedPermissions.write,
-			execute: selectedPermissions.execute
+			read: permissions.read,
+			write: permissions.write,
+			execute: permissions.execute
 		}
 	});
 
@@ -63,13 +60,13 @@ export function RoleStepForm({ submitRef }: RoleStepFormProps) {
 
 	useEffect(() => {
 		async function getRoles() {
-			dispatch(set_loading(true));
+			dispatch(set_add_form_loading(true));
 
 			const response: AxiosResponse<Role[]> = await RoleService.getAll();
 
 			if (response.status === 200) {
 				setAvailableRoles(response.data.map((x: Role) => ({ label: x.name, value: x.id })));
-				dispatch(set_loading(false));
+				dispatch(set_add_form_loading(false));
 			}
 		}
 
@@ -77,15 +74,15 @@ export function RoleStepForm({ submitRef }: RoleStepFormProps) {
 	}, []);
 
 	function onReadRoleAdd(values: string[]) {
-		dispatch(set_selected_permissions({ read: [...selectedPermissions.read, ...values] }));
+		dispatch(change_permissions({ read: [...permissions.read, ...values] }));
 	}
 
 	function onWriteRoleAdd(values: string[]) {
-		dispatch(set_selected_permissions({ write: [...selectedPermissions.write, ...values] }));
+		dispatch(change_permissions({ write: [...permissions.write, ...values] }));
 	}
 
 	function onExecuteRoleAdd(values: string[]) {
-		dispatch(set_selected_permissions({ execute: [...selectedPermissions.execute, ...values] }));
+		dispatch(change_permissions({ execute: [...permissions.execute, ...values] }));
 	}
 
 	return (

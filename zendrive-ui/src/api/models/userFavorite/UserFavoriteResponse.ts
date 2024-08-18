@@ -1,3 +1,5 @@
+import { MetaFile } from "@apiModels/metafile";
+
 export class UserFavoriteResponse {
 	id: string;
 	userId: string;

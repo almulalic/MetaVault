@@ -1,5 +1,5 @@
 import Heading, { HeadingType } from "@components/Heading/Heading";
-import { RootState } from "../../../store";
+import { RootState } from "@store/store";
 import { useSelector } from "react-redux";
 import { convertBytes } from "@utils/utils";
 
@@ -11,7 +11,7 @@ export function Summary() {
 	}
 
 	return (
-		<div className="flex flex-col gap-6">
+		<div className="flex flex-col gap-2">
 			<div className="flex flex-col">
 				<Heading type={HeadingType.FIVE}>Summary</Heading>
 				<p className="text-sm text-muted-foreground">
@@ -19,7 +19,7 @@ export function Summary() {
 				</p>
 			</div>
 
-			<ul className="ml-6 list-disc [&>li]:mt-2">
+			<ul className="list-disc [&>li]:mt-2">
 				<li className="flex items-center">
 					<span className="mr-2 text-blue-500">📄</span>
 					<span>File count: {scanCheckResponse.fileCount}</span>

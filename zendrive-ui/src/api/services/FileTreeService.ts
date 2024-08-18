@@ -1,16 +1,22 @@
 import { AxiosResponse } from "axios";
 import { authorizedAxiosApp } from "./Axios";
+import { FileTreeViewDTO } from "@apiModels/FileTreeView";
+import { MetafileBulkDeleteDto } from "@apiModels/metafile/dto/MetafileBulkDeleteDto";
 
 export class FileTreeService {
-	static async getRootFile(): Promise<AxiosResponse<MetaFile>> {
+	static async getRoot(): Promise<AxiosResponse<FileTreeViewDTO>> {
 		return authorizedAxiosApp.get(`file/tree/root`);
 	}
 
-	static async getFileTree(id: string): Promise<AxiosResponse<FileTreeViewDTO>> {
+	static async get(id: string): Promise<AxiosResponse<FileTreeViewDTO>> {
 		return authorizedAxiosApp.get(`file/tree/${id}`);
 	}
 
-	static async deleteFile(id: string): Promise<AxiosResponse> {
-		return authorizedAxiosApp.delete(`file/${id}`);
+	static async bulkDelete(data: MetafileBulkDeleteDto): Promise<AxiosResponse> {
+		return authorizedAxiosApp.post(`file/delete/bulk`, data);
+	}
+
+	static async delete(id: string): Promise<AxiosResponse> {
+		return authorizedAxiosApp.delete(`file/delete/${id}`);
 	}
 }

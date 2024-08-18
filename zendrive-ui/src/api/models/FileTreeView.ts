@@ -1,4 +1,6 @@
-class FileTreeViewDTO {
+import { MetaFile } from "./metafile";
+
+export class FileTreeViewDTO {
 	previousView: MetaFile[];
 	current: MetaFile;
 	currentView: MetaFile[];

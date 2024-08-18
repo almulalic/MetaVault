@@ -1,11 +1,11 @@
 import App from "./App";
 import React from "react";
-import store from "./store";
+import store from "@store/store";
 import { Provider } from "react-redux";
 import ReactDOM from "react-dom/client";
-import { Toaster } from "@components/ui/toaster";
+import { Toaster } from "@elements/ui/toaster";
 import { BrowserRouter } from "react-router-dom";
-import { ThemeProvider } from "@components/ui/theme-provider";
+import { ThemeProvider } from "@elements/ui/theme-provider";
 
 import "./index.scss";
 

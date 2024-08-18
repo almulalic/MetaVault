@@ -1,52 +1,50 @@
-import { Dialog, DialogContent, DialogTrigger } from "@components/ui/dialog";
+import { Dialog, DialogContent } from "@elements/ui/dialog";
 import { useRef, useState } from "react";
-import { Button } from "@components/ui/button";
+import { Button } from "@elements/ui/button";
 import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState } from "../../store";
-import {
-	change_permissions,
-	change_step,
-	change_storage_type,
-	next_step,
-	previous_step,
-	reset,
-	set_generated_metafile,
-	set_loading
-} from "../../store/addDirectorySlice";
+
 import { LocalScanService } from "@services/LocalScanService";
-import { toast } from "@components/ui/use-toast";
-import { Loader2 } from "lucide-react";
+import { toast } from "@elements/ui/use-toast";
+import { FolderPlus, Loader2 } from "lucide-react";
 import { AxiosResponse } from "axios";
 import { useNavigate } from "react-router-dom";
 import { StorageTypeStep, RoleStepForm, Summary, FinalizeStep } from "./steps";
 import { LocalStoreForm } from "./stores";
+import IconButton from "@elements/IconButton/IconButton";
+import { DialogTitle } from "@radix-ui/react-dialog";
+import { MetaFile } from "@apiModels/metafile";
+import { ConfigForm } from "./steps/ConfigForm";
+import { AppDispatch, RootState } from "@store/store";
+import {
+	change_step,
+	next_step,
+	previous_step,
+	reset_add_directory_state,
+	set_add_form_loading
+} from "@store/slice/addDirectorySlice";
 
 export default function AddDirectoryDialog() {
 	const dispatch = useDispatch<AppDispatch>();
 	const navigate = useNavigate();
 
-	const LAST_STEP: number = 5;
+	const LAST_STEP: number = 6;
 
-	const {
-		isLoading,
-		currentStep,
-		selectedStorageType,
-		scanCheckResponse,
-		generatedMetafile,
-		selectedPermissions,
-		permissions
-	} = useSelector((state: RootState) => state.addDirectory);
+	const { isLoading, currentStep, scanCheckResponse, permissions, config } = useSelector(
+		(state: RootState) => state.addDirectory
+	);
 
 	const [dialogOpen, setDialogOpen] = useState(false);
+
 	const storeFromSubmitRef = useRef<HTMLInputElement>(null);
 	const roleFromSubmitRef = useRef<HTMLInputElement>(null);
+	const configFromSubmitRef = useRef<HTMLInputElement>(null);
 
-	async function submitAddDirectory() {
-		dispatch(set_loading(true));
+	async function submitAddDirectory(): Promise<MetaFile | null> {
+		dispatch(set_add_form_loading(true));
 
 		const response: AxiosResponse<MetaFile> = await LocalScanService.scan({
-			path: scanCheckResponse?.path!,
-			permissions: permissions
+			permissions: permissions,
+			config: config
 		});
 
 		if (response.status !== 200) {
@@ -54,32 +52,23 @@ export default function AddDirectoryDialog() {
 				title: "An unexpected error has occured!"
 			});
 
-			dispatch(set_loading(false));
-			return;
+			dispatch(set_add_form_loading(false));
+			return null;
 		}
 
-		dispatch(set_loading(false));
-		dispatch(set_generated_metafile(response.data));
+		dispatch(set_add_form_loading(false));
 		dispatch(change_step(currentStep + 1));
+
+		return response.data;
 	}
 
 	function onPreviousClick() {
 		switch (currentStep) {
 			case 1:
 				setDialogOpen(false);
-				dispatch(reset());
+				dispatch(reset_add_directory_state());
 				break;
-			case 2:
-				dispatch(previous_step());
-				break;
-			case 3:
-				dispatch(previous_step());
-				break;
-			case 4:
-				dispatch(change_permissions(selectedPermissions));
-				dispatch(previous_step());
-				break;
-			case 5:
+			default:
 				dispatch(previous_step());
 				break;
 		}
@@ -88,7 +77,6 @@ export default function AddDirectoryDialog() {
 	async function onNextClick() {
 		switch (currentStep) {
 			case 1:
-				dispatch(change_storage_type(selectedStorageType));
 				dispatch(next_step());
 				break;
 			case 2:
@@ -105,10 +93,17 @@ export default function AddDirectoryDialog() {
 				}
 				break;
 			case 5:
-				await submitAddDirectory();
+				if (configFromSubmitRef && configFromSubmitRef.current) {
+					configFromSubmitRef.current.click();
+				}
+				break;
+			case 6:
+				const metafile = await submitAddDirectory();
 				setDialogOpen(false);
-				navigate(`/files/file/${generatedMetafile?.id}`);
-				window.location.reload();
+
+				if (metafile) {
+					navigate(`/files/file/${metafile.id}`);
+				}
 				break;
 		}
 	}
@@ -117,17 +112,23 @@ export default function AddDirectoryDialog() {
 		setDialogOpen(open);
 
 		if (!open) {
-			dispatch(reset());
+			dispatch(reset_add_directory_state());
 		}
 	};
 
 	return (
 		<Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-			<DialogTrigger asChild>
-				<Button>Add</Button>
-			</DialogTrigger>
+			<IconButton
+				variant="ghost"
+				tooltipContent="Add directory"
+				onClick={() => handleDialogOpenChange(true)}
+			>
+				<FolderPlus className="w-6 h-6" />
+			</IconButton>
 
 			<DialogContent className="flex flex-col">
+				<DialogTitle hidden>Add directory</DialogTitle>
+
 				<div>
 					{currentStep === 1 && <StorageTypeStep />}
 
@@ -137,15 +138,17 @@ export default function AddDirectoryDialog() {
 
 					{currentStep === 4 && <RoleStepForm submitRef={roleFromSubmitRef} />}
 
-					{currentStep === 5 && <FinalizeStep />}
+					{currentStep === 5 && <ConfigForm submitRef={configFromSubmitRef} />}
+
+					{currentStep === 6 && <FinalizeStep />}
 				</div>
 
-				<div className="w-full flex gap-4 mt-4">
+				<div className="w-full flex gap-4 mt-4 select-none">
 					<Button
 						variant="secondary"
 						className="w-1/2"
 						onClick={onPreviousClick}
-						disabled={isLoading || currentStep === LAST_STEP}
+						disabled={isLoading}
 					>
 						{currentStep === 1 ? "Cancel" : "Previous"}
 					</Button>

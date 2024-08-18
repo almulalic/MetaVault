@@ -1,6 +1,6 @@
 import React, { ReactNode } from "react";
-import { Sidebar } from "@components/ui/sidebar";
 import { Menu } from "@components/Menu/Menu";
+import { Sidebar } from "@components/Sidebar/sidebar";
 
 interface PageProps {
 	children: ReactNode;

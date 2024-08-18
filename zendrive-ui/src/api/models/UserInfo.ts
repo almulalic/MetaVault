@@ -1,6 +1,5 @@
-import { AuthType } from "./auth/AuthType";
 import { Role } from "./auth/Role";
-import { UserFavorite } from "./userFavorite/UserFavorite";
+import { AuthType } from "./auth/AuthType";
 
 export type UserInfo = {
 	id: string;
@@ -16,6 +15,4 @@ export type UserInfo = {
 	accountNonExpired: boolean;
 	accountNonLocked: boolean;
 	credentialsNonExpired: boolean;
-	authorities: { authority: string }[];
-	favorites: UserFavorite[];
 };
