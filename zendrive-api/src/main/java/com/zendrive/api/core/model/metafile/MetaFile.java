@@ -20,10 +20,11 @@ public class MetaFile {
     private String name;
     private Long size;
     private String createdDate;
-    private Long lastModifiedDate;
-    private Store store;
+    private Long lastModifiedMs;
+    private Long lastSyncMs;
     private String blobPath;
     private String previous;
+    private MetaFileConfig config;
     private Permissions permissions;
     private List<String> children;
     private List<String> breadcrumbs;

@@ -1,6 +1,7 @@
 package com.zendrive.api.core.service.user;
 
 import com.zendrive.api.core.model.auth.User;
+import com.zendrive.api.core.model.metafile.MetaFile;
 import com.zendrive.api.core.model.user.UserFavorite;
 import com.zendrive.api.core.repository.AuthRepository;
 import com.zendrive.api.core.repository.MetafileRepository;
@@ -8,9 +9,10 @@ import com.zendrive.api.core.repository.UserFavoriteRepository;
 import com.zendrive.api.exception.BadRequestException;
 import com.zendrive.api.exception.repository.UserNotFoundException;
 import com.zendrive.api.rest.model.dto.auth.CreateUserRequest;
+import com.zendrive.api.rest.model.dto.metafile.MetafileView;
 import com.zendrive.api.rest.model.dto.metafile.UserDTO;
 import com.zendrive.api.rest.model.dto.user.UserFavoriteDTO;
-import com.zendrive.api.rest.model.dto.user.UserFavoriteResponse;
+import com.zendrive.api.rest.model.dto.user.UserFavoriteView;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -32,67 +34,77 @@ public class UserService {
     private final UserFavoriteRepository userFavoriteRepository;
     private final MetafileRepository metafileRepository;
 
-    public List<UserFavoriteResponse> getUserFavorites(Long userId) {
+    public List<UserFavoriteView> getUserFavorites(Long userId) {
         List<UserFavorite> userFavorites = userFavoriteRepository.findAllByUserId(userId);
-        List<UserFavoriteResponse> userFavoriteResponses = new ArrayList<>();
+        List<UserFavoriteView> userFavoriteRespons = new ArrayList<>();
 
         if (userFavorites.size() > 0) {
             for (UserFavorite userFavorite : userFavorites) {
                 metafileRepository.findById(userFavorite.getMetafileId())
-                  .ifPresent(file -> userFavoriteResponses.add(new UserFavoriteResponse(userFavorite, file)));
+                  .ifPresent(metaFile -> userFavoriteRespons.add(new UserFavoriteView(userFavorite, metaFile)));
             }
         }
 
-        return userFavoriteResponses;
+        return userFavoriteRespons;
     }
 
-    public UserFavoriteResponse addFolderToFavorites(Long userId, UserFavoriteDTO userFavoriteDTO)
+    public List<UserFavoriteView> addToFavorites(Long userId, List<String> metafileIds)
       throws BadRequestException {
-        if (metafileRepository.findById(userFavoriteDTO.getMetafileId()).isEmpty()) {
-            throw new BadRequestException(String.format(
-              "Metafile with ID: %s was not found.",
-              userFavoriteDTO.getMetafileId()
-            ));
+        List<UserFavoriteView> successful = new ArrayList<>();
+
+        for (String metafileId : metafileIds) {
+            Optional<MetaFile> optionalMetaFile = metafileRepository.findById(metafileId);
+
+            if (optionalMetaFile.isEmpty()) {
+                throw new BadRequestException(String.format(
+                  "Metafile with ID: %s was not found.",
+                  metafileId
+                ));
+            }
+
+            if (userFavoriteRepository.findUsersFavoriteByMetafileId(userId, metafileId)
+                  .isPresent()) {
+                throw new BadRequestException(String.format(
+                  "Metafile with ID: %s is already favorite.",
+                  metafileId
+                ));
+            }
+
+            UserFavorite userFavorite = userFavoriteRepository.save(
+              UserFavorite.Builder()
+                .withMetafileId(metafileId)
+                .withUserId(userId)
+                .build()
+            );
+
+            successful.add(new UserFavoriteView(userFavorite, optionalMetaFile.get()));
         }
 
-        if (userFavoriteRepository.findUsersFavoriteByMetafileId(userId, userFavoriteDTO.getMetafileId()).isPresent()) {
-            throw new BadRequestException(String.format(
-              "Metafile with ID: %s is already favorite.",
-              userFavoriteDTO.getMetafileId()
-            ));
-        }
-
-        UserFavorite userFavorite = userFavoriteRepository.save(
-          UserFavorite.Builder()
-            .withMetafileId(userFavoriteDTO.getMetafileId())
-            .withUserId(userId)
-            .build()
-        );
-
-        return UserFavoriteResponse.Builder()
-                 .withId(userFavorite.getId())
-                 .withMetafile(metafileRepository.findById(userFavorite.getMetafileId()).orElse(null))
-                 .withUserId(userFavorite.getUserId())
-                 .build();
+        return successful;
     }
 
-    public UserFavorite removeFolderFromFavorites(Long userId, UserFavoriteDTO userFavoriteDTO)
+    public List<UserFavoriteView> removeFromFavorites(Long userId, List<String> metafileIds)
       throws BadRequestException {
-        Optional<UserFavorite> userFavorite = userFavoriteRepository.findUsersFavoriteByMetafileId(
-          userId,
-          userFavoriteDTO.getMetafileId()
-        );
+        List<UserFavoriteView> successful = new ArrayList<>();
 
-        if (userFavorite.isEmpty()) {
-            throw new BadRequestException(String.format(
-              "Metafile with ID: %s was not found in favorites.",
-              userFavoriteDTO.getMetafileId()
-            ));
+        for (String metafileId : metafileIds) {
+            Optional<UserFavorite> userFavorite = userFavoriteRepository.findUsersFavoriteByMetafileId(
+              userId,
+              metafileId
+            );
+
+            if (userFavorite.isEmpty()) {
+                throw new BadRequestException(String.format(
+                  "Metafile with ID: %s was not found in favorites.",
+                  metafileId
+                ));
+            }
+
+            successful.add(new UserFavoriteView(userFavorite.get(), metafileRepository.findById(metafileId).get()));
+            userFavoriteRepository.delete(userFavorite.get());
         }
 
-        userFavoriteRepository.delete(userFavorite.get());
-
-        return userFavorite.get();
+        return successful;
     }
 
     /**

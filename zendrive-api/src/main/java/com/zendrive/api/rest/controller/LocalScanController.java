@@ -24,7 +24,7 @@ public class LocalScanController {
     public ResponseEntity<ScanCheckResponse> checkLocalPath(
       @RequestBody LocalScanDto localScanDto
     ) {
-        return ResponseEntity.ok(this.localScanService.check(localScanDto.getPath()));
+        return ResponseEntity.ok(this.localScanService.check(localScanDto.getConfig().getInputPath()));
     }
 
     @RequestMapping(method = RequestMethod.POST, path = "")
@@ -33,7 +33,7 @@ public class LocalScanController {
     ) {
         return ResponseEntity.ok(
           this.localScanService.scan(
-            localScanDto.getPath(),
+            localScanDto.getConfig(),
             localScanDto.getDestinationId(),
             localScanDto.getPermissions()
           )

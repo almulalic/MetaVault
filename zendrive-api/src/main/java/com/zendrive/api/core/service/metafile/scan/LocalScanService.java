@@ -1,25 +1,21 @@
 package com.zendrive.api.core.service.metafile.scan;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.zendrive.api.core.model.metafile.MetaFile;
+import com.zendrive.api.core.model.metafile.MetaFileConfig;
 import com.zendrive.api.core.model.metafile.Permissions;
-import com.zendrive.api.core.model.metafile.Store;
+import com.zendrive.api.core.model.metafile.StorageType;
 import com.zendrive.api.core.repository.MetafileRepository;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Writer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import com.zendrive.api.exception.BadRequestException;
 import com.zendrive.api.rest.model.dto.scan.ScanCheckResponse;
 import org.apache.commons.vfs2.*;
-import org.springframework.data.jpa.repository.Meta;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -36,7 +32,8 @@ public class LocalScanService implements ScanService<File> {
       FileObject start,
       Path inputPath,
       String destinationId,
-      Permissions permissions
+      Permissions permissions,
+      MetaFileConfig config
     ) throws Exception {
         Map<String, MetaFile> metaFileMap = new HashMap<>();
         Map<String, String> pathToIdMap = new HashMap<>();
@@ -71,8 +68,9 @@ public class LocalScanService implements ScanService<File> {
                                   .withName(file.getName().getBaseName())
                                   .withSize(file.isFile() ? content.getSize() : null)
                                   .withCreatedDate(createdDate)
-                                  .withLastModifiedDate(content.getLastModifiedTime())
-                                  .withStore(Store.LOCAL)
+                                  .withLastModifiedMs(content.getLastModifiedTime())
+                                  .withLastSyncMs(System.currentTimeMillis()) // TODO Timezone
+                                  .withConfig(config)
                                   .withBlobPath(file.getName().getPath())
                                   .withPrevious(destinationId)
                                   .withChildren(file.isFolder() ? new ArrayList<>() : null)
@@ -204,10 +202,14 @@ public class LocalScanService implements ScanService<File> {
     }
 
     @Override
-    public MetaFile scan(String path, String destinationId, Permissions permissions) {
+    public MetaFile scan(
+      MetaFileConfig config,
+      String destinationId,
+      Permissions permissions
+    ) {
         try {
             FileSystemManager fsManager = VFS.getManager();
-            FileObject startDir = fsManager.resolveFile(path);
+            FileObject startDir = fsManager.resolveFile(config.getInputPath());
 
             if (!startDir.exists()) {
                 throw new BadRequestException("Path does not exist or is not accessible to app.");
@@ -222,12 +224,14 @@ public class LocalScanService implements ScanService<File> {
             }
 
             MetaFile root = metafileRepository.getRootNode();
-            Path inputPath = Paths.get(path);
+            Path inputPath = Paths.get(config.getInputPath());
+
             List<MetaFile> metaFiles = parseDirectory(
               startDir,
               inputPath,
               destinationId != null ? destinationId : root.getId(),
-              permissions
+              permissions,
+              config
             );
 
             Optional<MetaFile> start = metaFiles.stream()

@@ -2,6 +2,7 @@ package com.zendrive.api.core.service.metafile;
 
 import com.zendrive.api.core.model.auth.Role;
 import com.zendrive.api.core.model.metafile.MetaFile;
+import com.zendrive.api.core.repository.UserFavoriteRepository;
 import com.zendrive.api.exception.BadRequestException;
 import com.zendrive.api.exception.ForbiddenException;
 import com.zendrive.api.rest.model.FileTreeViewDTO;
@@ -14,13 +15,16 @@ import java.util.stream.Collectors;
 @Service
 public class FileTreeService {
     private final MetafileRepository metafileRepository;
+    private final UserFavoriteRepository userFavoriteRepository;
 
-    public FileTreeService(MetafileRepository metafileRepository) {
+    public FileTreeService(MetafileRepository metafileRepository, UserFavoriteRepository userFavoriteRepository) {
+        this.userFavoriteRepository = userFavoriteRepository;
         this.metafileRepository = metafileRepository;
+
     }
 
-    public MetaFile getFileTreeRoot() {
-        return this.metafileRepository.getRootNode();
+    public FileTreeViewDTO getFileTreeRoot(List<Role> roles) {
+        return getFileTree(this.metafileRepository.getRootNode().getId(), roles);
     }
 
     public FileTreeViewDTO getFileTree(String id, List<Role> roles) {
@@ -62,27 +66,45 @@ public class FileTreeService {
         return metafileRepository.findById(id);
     }
 
-    public boolean deleteFile(String id) {
+    public boolean bulkDelete(List<String> ids) {
+        ids.forEach(this::delete);
+        return true;
+    }
+
+    public boolean delete(String id) {
         MetaFile file = metafileRepository
                           .findById(id)
                           .orElseThrow(() -> new BadRequestException("Metafile not found!"));
 
-        recursiveDeleteFile(file);
+        if (file.getBlobPath().equals("/")) {
+            throw new ForbiddenException("Can't delete root file!");
+        }
+
+        List<String> deletedIds = recursiveFindFiles(file);
+
+        userFavoriteRepository.deleteAllByMetafileId(deletedIds);
+        metafileRepository.deleteAllByIdIn(deletedIds);
+
         return true;
     }
 
-    public void recursiveDeleteFile(MetaFile file) {
+    public List<String> recursiveFindFiles(MetaFile file) {
+        List<String> deletedFileIds = new ArrayList<>();
+
         if (file.getChildren() != null && !file.getChildren().isEmpty()) {
             for (String childId : file.getChildren()) {
-                MetaFile child = metafileRepository.findById(childId)
-                                   .orElseThrow(() -> new BadRequestException("Metafile not found!"));
-
-                recursiveDeleteFile(child);
+                metafileRepository.findById(childId).ifPresent(child -> {
+                    deletedFileIds.add(child.getId());
+                    deletedFileIds.addAll(recursiveFindFiles(child));
+                });
             }
         }
 
-        metafileRepository.delete(file);
+        deletedFileIds.add(file.getId());
+
+        return deletedFileIds;
     }
+
 
     public int bulkUpload(List<MetaFile> metaFiles) {
         metafileRepository.saveAll(metaFiles);

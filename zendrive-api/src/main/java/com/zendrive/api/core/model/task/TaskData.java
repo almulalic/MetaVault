@@ -1,2 +1,4 @@
-package com.zendrive.api.core.model.task;public class TaskData {
+package com.zendrive.api.core.model.task;
+
+public class TaskData {
 }

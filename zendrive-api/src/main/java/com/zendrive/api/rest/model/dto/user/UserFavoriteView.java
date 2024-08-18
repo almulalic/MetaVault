@@ -12,14 +12,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(builderMethodName = "Builder", builderClassName = "Builder", setterPrefix = "with")
-public class UserFavoriteResponse {
+public class UserFavoriteView {
     private String id;
     private Long userId;
-    private MetafileView metaFileView;
+    private MetafileView metafileView;
 
-    public UserFavoriteResponse(UserFavorite userFavorite, MetaFile metaFile) {
+    public UserFavoriteView(UserFavorite userFavorite, MetaFile metaFile) {
         this.id = userFavorite.getId();
         this.userId = userFavorite.getUserId();
-        this.metaFileView = new MetafileView(metaFile);
+        this.metafileView = new MetafileView(metaFile);
     }
 }

@@ -1,7 +1,7 @@
 package com.zendrive.api.core.model.metafile;
 
-public enum Store {
+public enum StorageType {
     LOCAL,
+    ZEN_NODE,
     S3,
-    AZURE
 }
