@@ -5,6 +5,7 @@ import com.zendrive.api.core.model.metafile.MetaFile;
 import com.zendrive.api.rest.model.FileTreeViewDTO;
 import com.zendrive.api.core.service.metafile.FileTreeService;
 import com.zendrive.api.rest.model.dto.metafile.BulkDeleteDto;
+import com.zendrive.api.rest.model.dto.metafile.BulkGetDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -46,6 +47,14 @@ public class FileTreeController {
     ) {
         return ResponseEntity.ok(fileTreeService.getFile(fileId));
     }
+    
+    @RequestMapping(method = RequestMethod.POST, path = "/find/bulk")
+    public ResponseEntity<List<MetaFile>> getFiles(
+      @RequestBody
+      @Valid BulkGetDto dto
+    ) {
+        return ResponseEntity.ok(fileTreeService.getFiles(dto.getMetafileIds()));
+    }
 
     @RequestMapping(method = RequestMethod.POST, path = "/delete/bulk")
     public ResponseEntity<Boolean> bulkDelete(
@@ -64,7 +73,8 @@ public class FileTreeController {
 
     @RequestMapping(method = RequestMethod.PUT, path = "bulk")
     public ResponseEntity bulkUpload(
-      @RequestBody List<MetaFile> body
+      @RequestBody
+      @Valid List<MetaFile> body
     ) {
         return ResponseEntity.ok(fileTreeService.bulkUpload(body));
     }
@@ -76,7 +86,7 @@ public class FileTreeController {
 
     @RequestMapping(method = RequestMethod.GET, path = "/search")
     public ResponseEntity<List<MetaFile>> search(
-      @RequestParam(required = false) String searchText
+      @RequestParam String searchText
     ) {
         return ResponseEntity.ok(fileTreeService.search(searchText));
     }

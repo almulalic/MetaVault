@@ -1,5 +1,102 @@
-import React from "react";
+import { AxiosResponse } from "axios";
+import { RootState } from "@store/store";
+import { Toggle } from "@elements/ui/toggle";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { MetaFile } from "@apiModels/metafile/MetaFile";
+import { FilePage } from "@components/FilePage/FilePage";
+import { RecentFileColumnDef } from "./components/Columns";
+import { FileTreeService } from "@services/FileTreeService";
+import { ColumnDef, Row, Table } from "@tanstack/react-table";
+import { set_details_expanded } from "@store/slice/userSlice";
+import { FilesTable } from "@components/FilesTable/FilesTable";
+import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { BulkGetDto } from "@apiModels/metafile/dto/BulkGetDto";
+import DetailsPanel from "@components/DetailsPanel/DetailsPanel";
+import Heading, { HeadingType } from "@components/Heading/Heading";
 
 export default function RecentFiles() {
-	return <div>RecentFiles</div>;
+	const navigate = useNavigate();
+
+	const dispatch = useDispatch();
+	const { recentFiles, detailsExpanded } = useSelector((state: RootState) => state.user);
+
+	const [isLoading, setLoading] = useState<boolean>(false);
+	const [currentView, setCurrentView] = useState<MetaFile[]>([]);
+
+	const columns: ColumnDef<MetaFile>[] = useMemo<ColumnDef<MetaFile>[]>(
+		() => RecentFileColumnDef,
+		[]
+	);
+
+	useEffect(() => {
+		getMetafiles(recentFiles);
+	}, []);
+
+	async function getMetafiles(ids: string[]) {
+		setLoading(true);
+
+		const response: AxiosResponse<MetaFile[]> = await FileTreeService.bulkGet(new BulkGetDto(ids));
+
+		if (response.status === 200) {
+			setCurrentView(response.data);
+		}
+
+		setLoading(false);
+	}
+
+	const handleRowClick = (_: Table<MetaFile>, __: Row<MetaFile> | null, metafile: MetaFile) => {
+		if (metafile.children !== null) {
+			navigate(`/files/tree/${metafile.id}`);
+		} else {
+			alert("Opening preview for: " + metafile.name);
+		}
+	};
+
+	return (
+		<FilePage title="Recent files">
+			<div className="relative flex justify-between gap-8 w-full h-screen overflow-hidden mt-4">
+				<div
+					className={`flex flex-col transition-transform duration-300 ease-in-out ${
+						detailsExpanded ? "w-9/12" : "w-full"
+					}`}
+					style={{
+						transition: "width 0.3s ease-in-out"
+					}}
+				>
+					<div className="flex justify-between items-center mb-4">
+						<Heading type={HeadingType.THREE} className="whitespace-nowrap">
+							Recent Files
+						</Heading>
+
+						<div className="flex items-center justify-end gap-2 w-full">
+							<Toggle
+								value="toggleExpanded"
+								defaultPressed={detailsExpanded}
+								aria-label={(detailsExpanded ? "Collapse" : "Expand") + " details"}
+								onClick={() => dispatch(set_details_expanded(!detailsExpanded))}
+							>
+								{detailsExpanded ? (
+									<PanelRightClose className="h-6 w-6" />
+								) : (
+									<PanelRightOpen className="h-6 w-6" />
+								)}
+							</Toggle>
+						</div>
+					</div>
+
+					<FilesTable
+						columns={columns}
+						data={currentView}
+						onRowClick={handleRowClick}
+						onRowBack={() => {}}
+						isLoading={isLoading}
+					/>
+				</div>
+
+				<DetailsPanel />
+			</div>
+		</FilePage>
+	);
 }

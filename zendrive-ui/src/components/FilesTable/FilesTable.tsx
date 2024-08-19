@@ -32,7 +32,7 @@ export interface DataTableProps {
 	isLoading: boolean;
 }
 
-export function FilesTable({ columns, data, onRowBack, isLoading }: DataTableProps) {
+export function FilesTable({ columns, data, onRowClick, onRowBack, isLoading }: DataTableProps) {
 	const table: ITable<MetaFile> = useReactTable({
 		data,
 		columns,
@@ -143,12 +143,7 @@ export function FilesTable({ columns, data, onRowBack, isLoading }: DataTablePro
 											className="cursor-pointer select-none"
 											data-state={row.getIsSelected() && "selected"}
 											onClick={(e) => onRowSelect(e, row)}
-											onDoubleClick={(e) => {
-												if (selectedMetafiles.length <= 1 && !e.shiftKey) {
-													table.toggleAllPageRowsSelected(false);
-													navigate(`/files/file/${row.original.id}`);
-												}
-											}}
+											onDoubleClick={() => onRowClick(table, row, row.original)}
 											onContextMenu={(e) => {
 												if (
 													selectedMetafiles.length <= 1 &&

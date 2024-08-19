@@ -58,7 +58,7 @@ export function DeleteMetafileDialog({ open, onOpenChange }: DeleteMetafileDialo
 			const ids = selectedMetafiles.map((x) => x.id);
 			dispatch(set_user_favorites(favorites.filter((x) => !ids.includes(x.metafileView.id))));
 
-			navigate(`/files/file/${currentMetafile?.id}?updateId=${generateRandomString()}`);
+			navigate(`/files/tree/${currentMetafile?.id}?updateId=${generateRandomString()}`);
 		} finally {
 			setLoading(false);
 		}

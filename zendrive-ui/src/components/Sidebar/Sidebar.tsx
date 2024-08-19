@@ -2,7 +2,6 @@ import { Button } from "../../elements/ui/button";
 import { cn } from "@utils/utils";
 import { ScrollArea } from "../../elements/ui/scroll-area";
 import {
-	Trash2,
 	FolderRoot,
 	PlusCircle,
 	Share2Icon,
@@ -29,8 +28,8 @@ import { RootState } from "@store/store";
 import { set_user_favorites } from "@store/slice/userSlice";
 import { MetafileView } from "@apiModels/metafile/MetafileView";
 
-interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
-	playlists: string[];
+export interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
+	className?: string;
 }
 
 export function Sidebar({ className }: SidebarProps) {
@@ -53,7 +52,7 @@ export function Sidebar({ className }: SidebarProps) {
 		async function getFavorites() {
 			setFavoritesLoading(true);
 
-			let response = await UserFavoriteService.getAll();
+			let response: AxiosResponse<UserFavoriteView[]> = await UserFavoriteService.getAll();
 
 			if (response.status === 200) {
 				dispatch(set_user_favorites(response.data));
@@ -84,7 +83,7 @@ export function Sidebar({ className }: SidebarProps) {
 						key={metafileView.id}
 						className="cursor-pointer items-center whitespace-nowrap rounded-md font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 w-full flex gap-2 justify-start text-sm"
 						onClick={() => {
-							navigate(`/files/file/${metafileView.id}`);
+							navigate(`/files/tree/${metafileView.id}`);
 						}}
 					>
 						{metafileView.isFolder ? (
@@ -113,9 +112,13 @@ export function Sidebar({ className }: SidebarProps) {
 						<ButtonWithIcon
 							icon={<FolderRoot />}
 							label="All files"
-							onClick={() => navigate("/files")}
+							onClick={() => navigate("/files/tree")}
 						/>
-						<ButtonWithIcon icon={<FolderClock />} label="Recet files" />
+						<ButtonWithIcon
+							icon={<FolderClock />}
+							label="Recet files"
+							onClick={() => navigate("/files/recent")}
+						/>
 						<ButtonWithIcon icon={<Share2Icon />} label="Shared with me" />
 					</div>
 				</div>

@@ -1,12 +1,12 @@
-import Page from "@components/Page/Page";
+import { Files } from "@pages/Files/Files";
+import { FilePage } from "@components/FilePage/FilePage";
 
 import "./Overview.scss";
-import { MyFiles } from "@components/MyFiles/MyFiles";
 
 export function Overview() {
 	return (
-		<Page>
-			<MyFiles />
-		</Page>
+		<FilePage title="Files">
+			<Files />
+		</FilePage>
 	);
 }

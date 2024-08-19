@@ -1,12 +1,11 @@
 class SearchDTO {
-    name?: String;
-    id?: String;
-    breadcrumbs?: String[];
+	id: string;
+	name: string;
+	breadcrumbs: string[];
 
-
-    constructor(name: String, id: String, breadcrumbs: String[]) {
-        this.name = name;
-        this.id = id;
-        this.breadcrumbs = breadcrumbs;
-    }
+	constructor(name: string, id: string, breadcrumbs: string[]) {
+		this.name = name;
+		this.id = id;
+		this.breadcrumbs = breadcrumbs;
+	}
 }

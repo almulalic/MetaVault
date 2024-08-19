@@ -1,12 +1,13 @@
-import React, { ReactNode } from "react";
+import { ReactNode } from "react";
 import { Menu } from "@components/Menu/Menu";
-import { Sidebar } from "@components/Sidebar/sidebar";
+import { Sidebar } from "@components/Sidebar/Sidebar";
 
-interface PageProps {
+export interface PageProps {
 	children: ReactNode;
+	title: string;
 }
 
-const Page: React.FC<PageProps> = ({ children }) => {
+export function FilePage({ children, title }: PageProps) {
 	return (
 		<div className="flex flex-col">
 			<div className="w-full">
@@ -14,12 +15,10 @@ const Page: React.FC<PageProps> = ({ children }) => {
 			</div>
 			<div className="flex">
 				<div className="w-1/6">
-					<Sidebar playlists={[]} />
+					<Sidebar />
 				</div>
 				<div className="w-5/6 px-12 flex flex-col justify-start">{children}</div>
 			</div>
 		</div>
 	);
-};
-
-export default Page;
+}

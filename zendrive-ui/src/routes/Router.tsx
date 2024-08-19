@@ -1,6 +1,8 @@
 import { Route, Routes } from "react-router-dom";
 import AuthorizedRoute from "./AuthorizedRoute";
 import { Login, Overview } from "../pages";
+import SettingsPage from "@pages/SettingsPage/SettingsPage";
+import RecentFiles from "@pages/RecentFiles/RecentFiles";
 
 export default function Router() {
 	return (
@@ -15,7 +17,7 @@ export default function Router() {
 			/>
 
 			<Route
-				path="/files"
+				path="/files/tree"
 				element={
 					<AuthorizedRoute title="" permissions={[]}>
 						<Overview />
@@ -24,18 +26,37 @@ export default function Router() {
 			/>
 
 			<Route
-				path="/files/file/:fileId"
+				path="/files/tree/:fileId"
 				element={
 					<AuthorizedRoute title="" permissions={[]}>
 						<Overview />
 					</AuthorizedRoute>
 				}
 			/>
+
+			<Route
+				path="/files/recent"
+				element={
+					<AuthorizedRoute title="" permissions={[]}>
+						<RecentFiles />
+					</AuthorizedRoute>
+				}
+			/>
+
 			<Route
 				path="/login"
 				element={
 					<AuthorizedRoute title="Login" permissions={[]}>
 						<Login />
+					</AuthorizedRoute>
+				}
+			/>
+
+			<Route
+				path="/settings"
+				element={
+					<AuthorizedRoute title="Settings" permissions={[]}>
+						<SettingsPage />
 					</AuthorizedRoute>
 				}
 			/>

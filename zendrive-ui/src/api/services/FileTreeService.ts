@@ -1,6 +1,8 @@
 import { AxiosResponse } from "axios";
 import { authorizedAxiosApp } from "./Axios";
+import { MetaFile } from "@apiModels/metafile";
 import { FileTreeViewDTO } from "@apiModels/FileTreeView";
+import { BulkGetDto } from "@apiModels/metafile/dto/BulkGetDto";
 import { MetafileBulkDeleteDto } from "@apiModels/metafile/dto/MetafileBulkDeleteDto";
 
 export class FileTreeService {
@@ -10,6 +12,10 @@ export class FileTreeService {
 
 	static async get(id: string): Promise<AxiosResponse<FileTreeViewDTO>> {
 		return authorizedAxiosApp.get(`file/tree/${id}`);
+	}
+
+	static async bulkGet(dto: BulkGetDto): Promise<AxiosResponse<MetaFile[]>> {
+		return authorizedAxiosApp.post(`file/find/bulk`, dto);
 	}
 
 	static async bulkDelete(data: MetafileBulkDeleteDto): Promise<AxiosResponse> {

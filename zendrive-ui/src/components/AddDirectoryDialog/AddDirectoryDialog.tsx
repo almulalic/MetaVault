@@ -102,7 +102,7 @@ export default function AddDirectoryDialog() {
 				setDialogOpen(false);
 
 				if (metafile) {
-					navigate(`/files/file/${metafile.id}`);
+					navigate(`/files/tree/${metafile.id}`);
 				}
 				break;
 		}

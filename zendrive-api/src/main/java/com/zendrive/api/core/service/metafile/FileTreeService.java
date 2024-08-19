@@ -66,6 +66,14 @@ public class FileTreeService {
         return metafileRepository.findById(id);
     }
 
+    public List<MetaFile> getFiles(List<String> ids) {
+        return ids.stream()
+                 .map(metafileRepository::findById)
+                 .filter(Optional::isPresent)
+                 .map(Optional::get)
+                 .collect(Collectors.toList());
+    }
+
     public boolean bulkDelete(List<String> ids) {
         ids.forEach(this::delete);
         return true;
@@ -119,6 +127,10 @@ public class FileTreeService {
     }
 
     public List<MetaFile> search(String searchText) {
+        if (searchText.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         return metafileRepository.search(searchText);
     }
 }

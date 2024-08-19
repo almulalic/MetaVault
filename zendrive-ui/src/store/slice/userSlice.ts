@@ -1,8 +1,9 @@
 import { Role } from "@apiModels/auth/Role";
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { UserFavoriteView } from "@apiModels/userFavorite/UserFavoriteView";
 import { getParsedLocalStorageItem } from "@utils/utils";
 import { LOCAL_STORAGE } from "@constants/constants";
+import { MetaFile } from "@apiModels/metafile/MetaFile";
 
 export interface UserSliceState {
 	favorites: UserFavoriteView[];
@@ -26,19 +27,19 @@ const userSlice = createSlice({
 	name: "user",
 	initialState,
 	reducers: {
-		set_user_favorites: (state, data) => {
+		set_user_favorites: (state: UserSliceState, data: PayloadAction<UserFavoriteView[]>) => {
 			state.favorites = data.payload;
 		},
-		set_user_roles: (state, data) => {
+		set_user_roles: (state: UserSliceState, data: PayloadAction<Role[]>) => {
 			state.roles = data.payload;
 		},
-		set_details_expanded: (state, data) => {
+		set_details_expanded: (state: UserSliceState, data: PayloadAction<boolean>) => {
 			state.detailsExpanded = data.payload;
 			localStorage.setItem(DETAILS_EXPANDED_KEY, JSON.stringify(state.detailsExpanded));
 		},
-		update_recent_files: (state, data) => {
+		update_recent_files: (state: UserSliceState, data: PayloadAction<string>) => {
 			let recentFiles = state.recentFiles;
-			let newId = data.payload.id;
+			let newId = data.payload;
 
 			if (recentFiles.includes(newId)) {
 				recentFiles = recentFiles.filter((x) => x !== newId);
@@ -48,10 +49,11 @@ const userSlice = createSlice({
 				recentFiles.shift();
 			}
 
-			state.recentFiles = recentFiles;
+			recentFiles.push(newId);
+			state.recentFiles = recentFiles.reverse();
 			localStorage.setItem(RECET_FILES_KEY, JSON.stringify(state.recentFiles));
 		},
-		set_manual_select_showed: (state, data) => {
+		set_manual_select_showed: (state: UserSliceState, data: PayloadAction<boolean>) => {
 			state.manualSelectShown = data.payload;
 		}
 	}

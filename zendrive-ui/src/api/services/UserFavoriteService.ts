@@ -1,11 +1,10 @@
 import { AxiosResponse } from "axios";
 import { authorizedAxiosApp } from "./Axios";
 import { UserFavoriteDto } from "../models/userFavorite/UserFavoriteDto";
-import { UserFavoriteResponse } from "../models/userFavorite/UserFavoriteResponse";
 import { UserFavoriteView } from "@apiModels/userFavorite/UserFavoriteView";
 
 export class UserFavoriteService {
-	static async getAll(): Promise<AxiosResponse<UserFavoriteResponse[]>> {
+	static async getAll(): Promise<AxiosResponse<UserFavoriteView[]>> {
 		return authorizedAxiosApp.get(`user/metafile/favorite`);
 	}
 
