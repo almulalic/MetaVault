@@ -1,0 +1,26 @@
+@startuml
+|User|
+start
+:Open UI Form;
+:Select Storage Type (Local, ZenNode, Azure, S3);
+:Select Input Path;
+:Optionally Select Schedule;
+:Select Read, Write, Execute Roles;
+:Select Additional Options;
+|Scan Service|
+:Receive Request;
+:Validate Request;
+if (Request Valid?) then (yes)
+  :Forward Request;
+  |Task Service|
+  :Initialize File System;
+  :Iterate and Get Metadata;
+  :Save Metadata to Elasticsearch;
+  :Save Task Metadata to Main Database;
+  stop
+else (no)
+  |Scan Service|
+  :Report Validation Failure to User;
+  end
+endif
+@enduml

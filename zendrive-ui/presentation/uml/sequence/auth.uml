@@ -1,0 +1,17 @@
+@startuml
+actor User
+entity "Authentication Service" as AuthService
+database "PostgreSQL Database" as DB
+
+User -> AuthService: Initiate Login (Credentials/SSO)
+AuthService -> AuthService: Validate Credentials/SSO
+
+alt Valid Credentials/SSO
+    AuthService -> AuthService: Generate Authentication Token
+    AuthService -> DB: Store Token
+    AuthService --> User: Grant Access
+else Invalid Credentials/SSO
+    AuthService --> User: Display Error Message
+end
+
+@enduml
