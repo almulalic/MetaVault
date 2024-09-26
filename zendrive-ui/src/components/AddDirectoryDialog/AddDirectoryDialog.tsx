@@ -11,7 +11,7 @@ import { AppDispatch, RootState } from "@store/store";
 import { useDispatch, useSelector } from "react-redux";
 import IconButton from "@elements/IconButton/IconButton";
 import { Dialog, DialogContent } from "@elements/ui/dialog";
-import { StorageTypeStep, RoleStepForm, Summary, FinalizeStep } from "./steps";
+import { StorageTypeStep, RoleStepForm, FileSummary, FinalizeStep } from "./steps";
 import {
 	next_step,
 	previous_step,
@@ -19,11 +19,11 @@ import {
 	set_add_form_loading
 } from "@store/slice/addDirectorySlice";
 import { S3StoreForm } from "./stores/S3StoreForm";
-import { TaskService } from "@services/TaskService";
+import { TaskService } from "@services/task/TaskService";
 import { MetafileConfig } from "@apiModels/metafile";
 import { StorageType } from "@apiModels/metafile/StorageType";
 import { CreateTaskResponse } from "@apiModels/task/CreateTaskResponse";
-import { ScanTaskParameters } from "@apiModels/task/implementation/ScanTask";
+import { ScanTaskParameters } from "@apiModels/task/parameters/ScanTaskParameters";
 
 export default function AddDirectoryDialog() {
 	const dispatch = useDispatch<AppDispatch>();
@@ -31,9 +31,12 @@ export default function AddDirectoryDialog() {
 
 	const LAST_STEP: number = 6;
 
-	const { isLoading, currentStep, fileStats, permissions, config } = useSelector(
-		(state: RootState) => state.addDirectory
-	);
+	const {
+		isLoading,
+		currentStep,
+		permissions,
+		metafileConfig: config
+	} = useSelector((state: RootState) => state.addDirectory);
 
 	const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -48,9 +51,9 @@ export default function AddDirectoryDialog() {
 		if (config.storageConfig.type === StorageType.LOCAL) {
 			if (!config.inputPath?.startsWith("file://")) {
 				currentConfig = new MetafileConfig(
-					false,
 					`file://${config.inputPath}`,
-					config.storageConfig
+					config.storageConfig,
+					config.syncConfig
 				);
 			}
 		}
@@ -156,7 +159,7 @@ export default function AddDirectoryDialog() {
 							<div>Not supported</div>
 						))}
 
-					{currentStep === 3 && fileStats && <Summary />}
+					{currentStep === 3 && <FileSummary />}
 
 					{currentStep === 4 && <RoleStepForm submitRef={roleFromSubmitRef} />}
 

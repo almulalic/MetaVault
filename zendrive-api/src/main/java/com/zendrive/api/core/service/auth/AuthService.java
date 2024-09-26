@@ -5,11 +5,9 @@ import com.zendrive.api.core.model.dao.pgdb.auth.Role;
 import com.zendrive.api.core.model.dao.pgdb.user.User;
 import com.zendrive.api.core.repository.zendrive.pgdb.RoleRepository;
 import com.zendrive.api.core.repository.zendrive.pgdb.UserRepository;
-import com.zendrive.api.exception.BadRequestException;
-import com.zendrive.api.exception.auth.TokenRefreshException;
-import com.zendrive.api.exception.auth.UnauthorizedException;
-import com.zendrive.api.exception.repository.UserExistsException;
-import com.zendrive.api.exception.repository.UserNotFoundException;
+import com.zendrive.api.exception.InvalidArgumentsException;
+import com.zendrive.api.exception.ZendriveErrorCode;
+import com.zendrive.api.exception.ZendriveException;
 import com.zendrive.api.rest.models.dto.auth.CreateUserRequest;
 import com.zendrive.api.rest.models.dto.auth.EditRoleRequest;
 import com.zendrive.api.rest.models.dto.token.GenerateTokenRequest;
@@ -60,15 +58,15 @@ public class AuthService {
 	 */
 	public User createUser(CreateUserRequest dto) {
 		if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
-			throw new UserExistsException("User with this email already exists");
+			throw new ZendriveException("User with this email already exists", ZendriveErrorCode.INVALID_ARGUMENTS);
 		}
 
 		List<Role> roles = dto.getRoles().stream()
 													.map(id ->
 																 roleRepository
 																	 .findById(id)
-																	 .orElseThrow(() -> new BadRequestException("Role with ID %s does not exist.".formatted(
-																		 id)))
+																	 .orElseThrow(() -> new ZendriveException("Role with ID %s does not exist.".formatted(
+																		 id), ZendriveErrorCode.ENTITY_NOT_FOUND))
 													)
 													.toList();
 
@@ -90,11 +88,11 @@ public class AuthService {
 	public User editUserRoles(EditRoleRequest dto) {
 		Optional<User> possibleUser = userRepository.findById(dto.getUserId());
 		if (possibleUser.isEmpty()) {
-			throw new UserNotFoundException("User with this ID does not exist");
+			throw new ZendriveException("User with this ID does not exist", ZendriveErrorCode.INVALID_ARGUMENTS);
 		}
 
 		if (dto.getRoles() == null || dto.getRoles().isEmpty()) {
-			throw new BadRequestException("Role must be specified.");
+			throw new ZendriveException("Role must be specified.", ZendriveErrorCode.INVALID_ARGUMENTS);
 		}
 
 		User user = possibleUser.get();
@@ -115,12 +113,12 @@ public class AuthService {
 				new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getPassword())
 			);
 		} catch (BadCredentialsException ex) {
-			throw new UnauthorizedException("Username or password is incorrect!");
+			throw new ZendriveException("Username or password is incorrect!", ZendriveErrorCode.AUTHENTICATION);
 		}
 
 		User user = userRepository
 									.findByEmail(dto.getEmail())
-									.orElseThrow(() -> new UserNotFoundException(
+									.orElseThrow(() -> new InvalidArgumentsException(
 										String.format("User with email '%s' not found.", dto.getEmail())
 									));
 
@@ -149,9 +147,9 @@ public class AuthService {
 																															 .withAccessToken(jwtService.generateToken(user))
 																															 .withRefreshToken(requestRefreshToken)
 																															 .build())
-															.orElseThrow(() -> new TokenRefreshException(
-																requestRefreshToken,
-																"Refresh token is not in database!"
+															.orElseThrow(() -> new ZendriveException(
+																"Refresh token is not in database!",
+																ZendriveErrorCode.PERMISSION_DENIED
 															));
 	}
 }

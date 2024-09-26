@@ -1,11 +1,12 @@
 package com.zendrive.api.core.service.s3;
 
+import com.zendrive.api.exception.ZendriveErrorCode;
+import com.zendrive.api.exception.ZendriveException;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -57,7 +58,10 @@ public class S3Utils {
 				matcher.group("key")
 			);
 		} else {
-			throw new IllegalArgumentException("Invalid S3 URL. Make sure its in the full format (with region and endpoint).");
+			throw new ZendriveException(
+				"Invalid S3 URL. Make sure its in the full format (with region and endpoint).",
+				ZendriveErrorCode.INVALID_ARGUMENTS
+			);
 		}
 	}
 }

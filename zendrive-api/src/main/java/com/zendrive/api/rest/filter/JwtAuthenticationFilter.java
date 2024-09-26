@@ -5,6 +5,7 @@ import com.zendrive.api.core.service.auth.JwtService;
 import com.zendrive.api.core.service.user.UserService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,11 +46,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		}
 
 		try {
-			jwt = authHeader.substring(7);
-			userEmail = jwtService.extractUserName(jwt);
+			if (authHeader.startsWith("Bearer ")) {
+				jwt = authHeader.substring(7);
+				userEmail = jwtService.extractUserName(jwt);
+			} else {
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				response.getWriter().write("Authorization header is missing or invalid!");
+				return;
+			}
 		} catch (ExpiredJwtException ex) {
 			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 			response.getWriter().write("JWT Expired!");
+			return;
+		} catch (MalformedJwtException ex) {
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			response.getWriter().write("Malformed JWT token!");
+			return;
+		} catch (Exception ex) {
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			response.getWriter().write("An error occurred while processing the JWT token!");
 			return;
 		}
 

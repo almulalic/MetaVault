@@ -8,7 +8,7 @@ import { change_storage_type } from "@store/slice/addDirectorySlice";
 
 export function StorageTypeStep() {
 	const dispatch = useDispatch();
-	const { config } = useSelector((state: RootState) => state.addDirectory);
+	const { metafileConfig: config } = useSelector((state: RootState) => state.addDirectory);
 
 	const onStorageTypeChange = (type: any) => {
 		dispatch(change_storage_type(type));

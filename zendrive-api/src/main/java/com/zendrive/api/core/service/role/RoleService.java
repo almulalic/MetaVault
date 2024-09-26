@@ -2,6 +2,7 @@ package com.zendrive.api.core.service.role;
 
 import com.zendrive.api.core.model.dao.pgdb.auth.Role;
 import com.zendrive.api.core.repository.zendrive.pgdb.RoleRepository;
+import com.zendrive.api.exception.InvalidArgumentsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +18,8 @@ public class RoleService {
 		return roleRepository.findAll();
 	}
 
-	public Optional<Role> getById(String id) {
-		return roleRepository.findById(id);
+	public Role getById(String id) {
+		return roleRepository.findById(id)
+												 .orElseThrow(() -> new InvalidArgumentsException("Role with provided id does not exist!"));
 	}
 }

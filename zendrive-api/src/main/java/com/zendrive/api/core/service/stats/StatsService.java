@@ -2,7 +2,7 @@ package com.zendrive.api.core.service.stats;
 
 import com.zendrive.api.core.configuration.vfs.FileSystemOptionsConfig;
 import com.zendrive.api.core.model.metafile.FileStats;
-import com.zendrive.api.core.model.metafile.StorageConfig;
+import com.zendrive.api.core.model.task.StorageConfig;
 import com.zendrive.api.core.utils.MetafileUtil;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.vfs2.FileSystemException;

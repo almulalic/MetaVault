@@ -2,33 +2,26 @@ package com.zendrive.api.core.service.metafile;
 
 import com.zendrive.api.core.model.dao.pgdb.auth.Role;
 import com.zendrive.api.core.model.dao.elastic.metafile.MetaFile;
-import com.zendrive.api.core.model.metafile.StorageConfig;
+import com.zendrive.api.core.model.task.StorageConfig;
 import com.zendrive.api.core.repository.zendrive.pgdb.UserFavoriteRepository;
 import com.zendrive.api.core.service.s3.S3Utils;
 import com.zendrive.api.core.service.task.TaskService;
-import com.zendrive.api.core.task.model.parameters.DeleteTaskParameters;
-import com.zendrive.api.core.task.model.request.DeleteTaskRequest;
-import com.zendrive.api.exception.BadRequestException;
-import com.zendrive.api.exception.ForbiddenException;
+import com.zendrive.api.exception.InvalidArgumentsException;
+import com.zendrive.api.exception.ZendriveErrorCode;
+import com.zendrive.api.exception.ZendriveException;
 import com.zendrive.api.rest.models.FileTreeViewDTO;
 import com.zendrive.api.core.repository.zendrive.elastic.MetafileRepository;
-import com.zendrive.api.rest.models.dto.job.CreateTaskResponse;
 import com.zendrive.api.rest.models.dto.metafile.ResourceResponse;
 import com.zendrive.api.rest.models.dto.metafile.SearchRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -53,21 +46,21 @@ public class MetafileService {
 		FileTreeViewDTO fileTreeViewDTO = new FileTreeViewDTO();
 
 		if (roles == null || roles.isEmpty()) {
-			throw new BadRequestException("Roles must be provided!");
+			throw new ZendriveException("Roles must be provided!", ZendriveErrorCode.INVALID_ARGUMENTS);
 		}
 
 		List<String> roleIds = roles.stream().map(Role::getId).toList();
 
 		MetaFile currentFile = metafileRepository
 														 .findById(id)
-														 .orElseThrow(() -> new BadRequestException("Metafile not found!"));
+														 .orElseThrow(() -> new InvalidArgumentsException("Metafile not found!"));
 
 		if (
 			!currentFile.getName().equals("root") &&
 			!currentFile.getBlobPath().equals("/") &&
 			currentFile.getPermissions().getRead().stream().noneMatch(roleIds::contains)
 		) {
-			throw new ForbiddenException("Forbidden access to metafile!");
+			throw new ZendriveException("Forbidden access to metafile!", ZendriveErrorCode.PERMISSION_DENIED);
 		}
 
 		fileTreeViewDTO.setCurrent(currentFile);
@@ -85,7 +78,7 @@ public class MetafileService {
 	}
 
 	public List<MetaFile> recursiveList(String startId) {
-		MetaFile start = get(startId).orElseThrow(() -> new BadRequestException("Start file not found!"));
+		MetaFile start = get(startId);
 		List<MetaFile> metaFiles = new ArrayList<>();
 
 		recursiveFetch(start, metaFiles);
@@ -99,34 +92,36 @@ public class MetafileService {
 		if (file.getChildren() != null && !file.getChildren().isEmpty()) {
 			file.getChildren().stream()
 					.map(this::get)
-					.filter(Optional::isPresent)
-					.map(Optional::get)
 					.forEach(child -> recursiveFetch(child, metaFiles));
 		}
 	}
 
 	public MetaFile getRoot() {
 		return this.metafileRepository.getRootNode()
-																	.orElseThrow(() -> new IllegalArgumentException("Root file not found!"));
+																	.orElseThrow(() -> new ZendriveException(
+																		"Root file not found!",
+																		ZendriveErrorCode.GENERAL
+																	));
 	}
 
-	public Optional<MetaFile> get(String id) {
+	public MetaFile get(String id) {
 		if (id.isEmpty()) {
-			throw new IllegalArgumentException("Id must not be empty.");
+			throw new InvalidArgumentsException("Id must not be empty.");
 		}
 
-		return metafileRepository.findById(id);
+		return metafileRepository.findById(id)
+														 .orElseThrow(() -> new InvalidArgumentsException("Metafile not found"));
 	}
 
 	public MetaFile findByPath(String path) {
 		if (path.isEmpty()) {
-			throw new IllegalArgumentException("Id must not be empty.");
+			throw new InvalidArgumentsException("Id must not be empty.");
 		}
 
 		path = removeTrailingSlash(path);
 
 		return metafileRepository.findByBlobPath(path)
-														 .orElseThrow(() -> new IllegalArgumentException("Metafile not found"));
+														 .orElseThrow(() -> new InvalidArgumentsException("Metafile not found"));
 	}
 
 	protected static String removeTrailingSlash(String path) {
@@ -144,60 +139,39 @@ public class MetafileService {
 							.collect(Collectors.toList());
 	}
 
-	public boolean bulkDelete(List<String> ids) {
-		ids.forEach(this::delete);
-		return true;
-	}
-
 	public boolean delete(String id) {
-		MetaFile file = metafileRepository
-											.findById(id)
-											.orElseThrow(() -> new BadRequestException("Metafile not found!"));
+		Optional<MetaFile> optionalMetaFile = metafileRepository.findById(id);
 
-		if (file.getBlobPath().equals("/")) {
-			throw new ForbiddenException("Can't delete root file!");
+		if (optionalMetaFile.isEmpty()) {
+			return false;
 		}
 
-		if (file.getChildren() != null) {
-			throw new BadRequestException("Can't delete folder! Use the delete job.");
+		MetaFile metaFile = optionalMetaFile.get();
+
+		if (metaFile.getBlobPath().equals("/")) {
+			throw new ZendriveException("Can't delete root file!", ZendriveErrorCode.PERMISSION_DENIED);
 		}
 
-		userFavoriteRepository.deleteAllByMetafileId(List.of(file.getId()));
-		metafileRepository.deleteAllByIdIn(List.of(file.getId()));
+		if (metaFile.getChildren() != null && metaFile.getChildren().size() > 0) {
+			metaFile.getChildren().forEach(this::delete);
+		}
 
-		MetaFile root = getRoot();
+		userFavoriteRepository.deleteAllByMetafileId(List.of(metaFile.getId()));
+		metafileRepository.deleteAllByIdIn(List.of(metaFile.getId()));
 
-		if (root.getChildren().contains(file.getId())) {
-			root.setChildren(root.getChildren().stream().filter(x -> x.equals(file.getId())).toList());
-			metafileRepository.save(root);
+		MetaFile previous = get(metaFile.getPrevious());
+
+		if (previous.getChildren() != null) {
+			previous.setChildren(previous.getChildren().stream().filter(x -> !x.equals(metaFile.getId())).toList());
+			metafileRepository.save(previous);
 		}
 
 		return true;
 	}
 
-	public List<CreateTaskResponse<DeleteTaskRequest>> bulkDeleteFolder(List<String> ids) {
+	public boolean bulkDelete(List<String> ids) {
 		return ids.stream()
-							.map(this::deleteFolder)
-							.collect(Collectors.toList());
-	}
-
-	public CreateTaskResponse<DeleteTaskRequest> deleteFolder(String id) {
-		MetaFile folder = metafileRepository
-												.findById(id)
-												.orElseThrow(() -> new BadRequestException("Metafolder not found!"));
-
-		if (folder.getBlobPath().equals("/")) {
-			throw new ForbiddenException("Can't delete root file!");
-		}
-
-		MetaFile root = getRoot();
-
-		if (root.getChildren().contains(folder.getId())) {
-			root.setChildren(root.getChildren().stream().filter(x -> !x.equals(folder.getId())).toList());
-			metafileRepository.save(root);
-		}
-
-		return taskService.runDelete(new DeleteTaskParameters(folder.getId()));
+							.allMatch(this::delete);
 	}
 
 	public Page<MetaFile> search(SearchRequest dto) {
@@ -209,7 +183,7 @@ public class MetafileService {
 	}
 
 	public ResourceResponse getBlobAsResource(String metafileId) throws IOException {
-		MetaFile metaFile = get(metafileId).orElseThrow(() -> new IllegalArgumentException("Metafile not found"));
+		MetaFile metaFile = get(metafileId);
 
 		Path filePath = Paths.get(metaFile.getBlobPath()).normalize();
 		Resource resource = getResource(
@@ -218,7 +192,7 @@ public class MetafileService {
 		);
 
 		if (!resource.exists() || !resource.isReadable()) {
-			throw new IllegalArgumentException("File not found: " + filePath);
+			throw new InvalidArgumentsException("File not found: " + filePath);
 		}
 
 		return new ResourceResponse(resource, metaFile.getBlobPath());
@@ -228,7 +202,8 @@ public class MetafileService {
 		return switch (storageConfig.getType()) {
 			case LOCAL -> new FileSystemResource(path.replace("file://", ""));
 			case S3 -> S3Utils.getResource(minioS3Client, path);
-			default -> throw new IllegalArgumentException();
+			default ->
+				throw new InvalidArgumentsException("Unrecognized storage type: %s".formatted(storageConfig.getType()));
 		};
 	}
 }

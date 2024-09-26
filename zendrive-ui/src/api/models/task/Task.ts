@@ -1,4 +1,4 @@
-import { ScanTaskParameters } from "./implementation/ScanTask";
+import { ScanTaskParameters } from "./parameters/ScanTaskParameters";
 
 export class Task {
 	id: string;
@@ -9,7 +9,6 @@ export class Task {
 	createdAt: string;
 	updatedAt: string;
 	scheduledAt?: string;
-	recurringTaskId?: string;
 
 	constructor(
 		id: string,
@@ -19,8 +18,7 @@ export class Task {
 		state: TaskState,
 		createdAt: string,
 		updatedAt: string,
-		scheduledAt?: string,
-		recurringTaskId?: string
+		scheduledAt?: string
 	) {
 		this.id = id;
 		this.version = version;
@@ -30,7 +28,6 @@ export class Task {
 		this.createdAt = createdAt;
 		this.updatedAt = updatedAt;
 		this.scheduledAt = scheduledAt;
-		this.recurringTaskId = recurringTaskId;
 	}
 }
 
@@ -43,6 +40,9 @@ export class TaskData {
 	details: TaskDetails;
 	history: TaskHistoryItem[];
 	metadata: TaskMetadata;
+	recurringTaskId?: string;
+	scheduleExpression?: string;
+	zoneId?: string;
 
 	constructor(
 		id: string,
@@ -52,7 +52,10 @@ export class TaskData {
 		labels: any[],
 		taskDetails: TaskDetails,
 		taskHistory: TaskHistoryItem[],
-		metadata: TaskMetadata
+		metadata: TaskMetadata,
+		recurringTaskId?: string,
+		scheduleExpression?: string,
+		zoneId?: string
 	) {
 		this.id = id;
 		this.version = version;
@@ -62,6 +65,9 @@ export class TaskData {
 		this.details = taskDetails;
 		this.history = taskHistory;
 		this.metadata = metadata;
+		this.recurringTaskId = recurringTaskId;
+		this.scheduleExpression = scheduleExpression;
+		this.zoneId = zoneId;
 	}
 }
 
@@ -143,15 +149,15 @@ export class TaskHistoryItem {
 }
 
 export class TaskMetadata {
-	taskRunrDashboardLog2?: TaskDashboardLog;
-	taskRunrDashboardProgressBar2: TaskDashboardProgress;
+	taskRunrDashboardLog?: TaskDashboardLog;
+	taskRunrDashboardProgressBar: TaskDashboardProgress;
 
 	constructor(
-		taskRunrDashboardLog2: TaskDashboardLog,
-		taskRunrDashboardProgressBar2: TaskDashboardProgress
+		taskRunrDashboardLog: TaskDashboardLog,
+		taskRunrDashboardProgressBar: TaskDashboardProgress
 	) {
-		this.taskRunrDashboardLog2 = taskRunrDashboardLog2;
-		this.taskRunrDashboardProgressBar2 = taskRunrDashboardProgressBar2;
+		this.taskRunrDashboardLog = taskRunrDashboardLog;
+		this.taskRunrDashboardProgressBar = taskRunrDashboardProgressBar;
 	}
 }
 

@@ -1,8 +1,9 @@
 import { AuthService } from ".";
-import axios, { Axios } from "axios";
+import axios, { Axios, AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { getLocalStorageItem } from "@utils/utils";
 import { BASE_API_URL, LOCAL_STORAGE_KEYS } from "@constants/constants";
 import { ErrorResponse } from "@apiModels/ErrorResponse";
+import { ApiResponse } from "@apiModels/ApiResponse";
 
 export const publicAxiosApp = axios.create({
 	baseURL: BASE_API_URL,
@@ -13,24 +14,10 @@ export const publicAxiosApp = axios.create({
 
 export const authorizedAxiosApp = axios.create({
 	baseURL: BASE_API_URL,
-	timeout: 100000,
-	validateStatus: (status) => status !== 401 && status !== 403
+	timeout: 100000
 });
 attachTokenLogic(authorizedAxiosApp);
 attachRefreshLogic(authorizedAxiosApp);
-// attachErrorInterceptorLogic(authorizedAxiosApp);
-
-function attachErrorInterceptorLogic(app: Axios) {
-	app.interceptors.response.use(
-		(response) => {
-			return response.data;
-		},
-		(error) => {
-			const errResponse = error.response?.data as ErrorResponse;
-			return Promise.reject(errResponse);
-		}
-	);
-}
 
 function attachTokenLogic(app: Axios) {
 	app.interceptors.request.use(async (config) => {
@@ -50,12 +37,19 @@ function attachRefreshLogic(app: Axios) {
 		(response) => {
 			return response;
 		},
-		async function (error) {
-			const originalRequest = error.config;
-			if (error.response.status === 401 && !originalRequest._retry) {
-				if (error.response.data == "JWT Expired!") {
-					originalRequest._retry = true;
+		async function (error: AxiosError) {
+			if (!error || !error.response) {
+				return;
+			}
 
+			const originalRequest = error.config;
+
+			if (!originalRequest) {
+				return;
+			}
+
+			if (error.response.status === 401 || error.response.status === 403) {
+				if (error.response.data == "JWT Expired!") {
 					let accessToken: string | null = getLocalStorageItem(LOCAL_STORAGE_KEYS.ACCESS_TOKEN);
 					let refreshToken: string | null = getLocalStorageItem(LOCAL_STORAGE_KEYS.REFRESH_TOKEN);
 
@@ -83,10 +77,8 @@ function attachRefreshLogic(app: Axios) {
 					window.location.replace("/login");
 				}
 			} else {
-				window.location.replace("/login");
+				return Promise.reject(error.response.data);
 			}
-
-			return Promise.reject(error);
 		}
 	);
 }

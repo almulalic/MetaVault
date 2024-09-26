@@ -30,4 +30,5 @@ public class TaskHistoryItem {
 	private String stackTrace;
 	private boolean doNotRetry;
 	private Instant scheduledAt;
+	private String recurringJobId;
 }

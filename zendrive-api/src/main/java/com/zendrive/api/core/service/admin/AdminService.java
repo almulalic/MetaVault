@@ -3,7 +3,8 @@ package com.zendrive.api.core.service.admin;
 import com.zendrive.api.core.model.dao.pgdb.user.User;
 import com.zendrive.api.core.repository.zendrive.pgdb.UserRepository;
 import com.zendrive.api.core.repository.zendrive.pgdb.RoleRepository;
-import com.zendrive.api.exception.BadRequestException;
+import com.zendrive.api.exception.ZendriveErrorCode;
+import com.zendrive.api.exception.ZendriveException;
 import com.zendrive.api.rest.models.dto.admin.EditUserDto;
 import com.zendrive.api.rest.models.dto.metafile.UserDto;
 import lombok.RequiredArgsConstructor;
@@ -28,21 +29,16 @@ public class AdminService {
 		Optional<User> optionalUser = userRepository.findById(dto.getId());
 
 		if (dto.getRoles().size() == 0) {
-			throw new BadRequestException("Must contain at least one role!");
+			throw new ZendriveException("Must contain at least one role!", ZendriveErrorCode.INVALID_ARGUMENTS);
 		}
 
 		if (optionalUser.isEmpty()) {
-			throw new BadRequestException("User not found.");
+			throw new ZendriveException("User not found.", ZendriveErrorCode.ENTITY_NOT_FOUND);
 		}
 
 		User user = optionalUser.get();
 
-		try {
-			user.setRoles(roleRepository.getRoles(dto.getRoles()));
-		} catch (IllegalArgumentException ex) {
-			throw new BadRequestException(ex.getMessage());
-		}
-
+		user.setRoles(roleRepository.getRoles(dto.getRoles()));
 		user.setEnabled(dto.isEnabled());
 		user.setLocked(dto.isLocked());
 		user.setUpdateDate(Date.from(Instant.now()));

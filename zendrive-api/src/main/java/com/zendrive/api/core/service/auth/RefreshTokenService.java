@@ -3,7 +3,8 @@ package com.zendrive.api.core.service.auth;
 import com.zendrive.api.core.model.dao.pgdb.auth.RefreshToken;
 import com.zendrive.api.core.repository.zendrive.pgdb.UserRepository;
 import com.zendrive.api.core.repository.zendrive.pgdb.RefreshTokenRepository;
-import com.zendrive.api.exception.auth.TokenRefreshException;
+import com.zendrive.api.exception.ZendriveErrorCode;
+import com.zendrive.api.exception.ZendriveException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -56,14 +57,13 @@ public class RefreshTokenService {
 	 *
 	 * @param token The refresh token to be verified.
 	 * @return The refresh token if it has not expired.
-	 * @throws TokenRefreshException If the refresh token has expired.
 	 */
 	public RefreshToken verifyExpiration(RefreshToken token) {
 		if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
 			refreshTokenRepository.delete(token);
-			throw new TokenRefreshException(
-				token.getToken(),
-				"Refresh token was expired. Please make a new sign-in request"
+			throw new ZendriveException(
+				"Refresh token was expired. Please make a new sign-in request",
+				ZendriveErrorCode.JWT_TOKEN_EXPIRED
 			);
 		}
 

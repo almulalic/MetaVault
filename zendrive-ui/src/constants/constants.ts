@@ -1,6 +1,5 @@
 export const APP_NAME = "ZenDrive";
 
-export const BASE_AUTH_URL = import.meta.env.VITE_APP_BASE_AUTH_URL;
 export const BASE_API_URL = import.meta.env.VITE_APP_BASE_API_URL;
 
 export class LOCAL_STORAGE_KEYS {

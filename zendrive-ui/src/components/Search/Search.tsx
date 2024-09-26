@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MetaFile } from "@apiModels/metafile";
 import { MetafileService } from "@services/MetafileService";
-import { SearchItem } from "@apiModels/metafile/dto/SearchResponse";
 import { SearchRequest } from "@apiModels/metafile/dto/SearchRequest";
 import { CommandItem, CommandList, CommandDialog, CommandShortcut } from "@elements/ui/command";
 import { isFile, isFolder } from "@utils/metafile";
@@ -87,8 +86,10 @@ export default function Search() {
 						onSelect={() => {
 							if (isFolder(metafile)) {
 								navigate(`/files/tree/${metafile.id}`);
-								setOpen(false);
+							} else {
+								navigate(`/files/tree/${metafile.previous}`);
 							}
+							setOpen(false);
 						}}
 						className="cursor-pointer flex flex-col justify-start items-start gap-2"
 					>

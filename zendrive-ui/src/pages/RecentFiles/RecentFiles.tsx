@@ -1,8 +1,10 @@
 import { AxiosResponse } from "axios";
 import { RootState } from "@store/store";
+import { isFolder } from "@utils/metafile";
 import { Toggle } from "@elements/ui/toggle";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { set_files_loading } from "@store/slice";
+import { MouseEvent, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { MetaFile } from "@apiModels/metafile/MetaFile";
 import { FilePage } from "@components/FilePage/FilePage";
@@ -10,13 +12,11 @@ import { RecentFileColumnDef } from "./components/Columns";
 import { MetafileService } from "@services/MetafileService";
 import { ColumnDef, Row, Table } from "@tanstack/react-table";
 import { set_details_expanded } from "@store/slice/userSlice";
-import { FilesTable } from "@components/FilesTable/FilesTable";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { BulkGetDto } from "@apiModels/metafile/dto/BulkGetDto";
 import DetailsPanel from "@components/DetailsPanel/DetailsPanel";
 import Heading, { HeadingType } from "@components/Heading/Heading";
-import { set_files_loading } from "@store/slice";
-import { isFolder } from "@utils/metafile";
+import { DataTable } from "@elements/DataTable/DataTable";
 
 export default function RecentFiles() {
 	const navigate = useNavigate();
@@ -48,11 +48,15 @@ export default function RecentFiles() {
 		dispatch(set_files_loading(false));
 	}
 
-	const handleRowClick = (_: Table<MetaFile>, __: Row<MetaFile> | null, metafile: MetaFile) => {
-		if (isFolder(metafile)) {
-			navigate(`/files/tree/${metafile.id}`);
+	const handleRowClick = (
+		_: MouseEvent<HTMLTableRowElement>,
+		__: Table<MetaFile>,
+		row: Row<MetaFile>
+	) => {
+		if (isFolder(row.original)) {
+			navigate(`/files/tree/${row.original.id}`);
 		} else {
-			alert("Opening preview for: " + metafile.name);
+			alert("Opening preview for: " + row.original.name);
 		}
 	};
 
@@ -88,12 +92,13 @@ export default function RecentFiles() {
 						</div>
 					</div>
 
-					<FilesTable
+					<DataTable
 						columns={columns}
 						data={currentView}
 						onRowClick={handleRowClick}
 						onRowBack={() => {}}
 						isLoading={isLoading}
+						isInitialLoad={false}
 					/>
 				</div>
 

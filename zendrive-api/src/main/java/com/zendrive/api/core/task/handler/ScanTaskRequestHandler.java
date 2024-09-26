@@ -2,13 +2,18 @@ package com.zendrive.api.core.task.handler;
 
 import com.zendrive.api.core.configuration.vfs.FileSystemOptionsConfig;
 import com.zendrive.api.core.model.metafile.FileStats;
+import com.zendrive.api.core.model.task.ConflictStrategy;
+import com.zendrive.api.core.model.task.SyncConfig;
 import com.zendrive.api.core.repository.zendrive.pgdb.RoleRepository;
+import com.zendrive.api.core.service.task.TaskService;
+import com.zendrive.api.core.task.model.parameters.SyncTaskParameters;
 import com.zendrive.api.core.task.model.request.ScanTaskRequest;
 import com.zendrive.api.core.model.dao.elastic.metafile.MetaFile;
 import com.zendrive.api.core.model.metafile.MetaFileConfig;
 import com.zendrive.api.core.model.metafile.Permissions;
 import com.zendrive.api.core.repository.zendrive.elastic.MetafileRepository;
 import com.zendrive.api.core.utils.MetafileUtil;
+import com.zendrive.api.exception.InvalidArgumentsException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.vfs2.*;
 import org.springframework.stereotype.Component;
@@ -19,11 +24,14 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static com.zendrive.api.core.utils.FormatUtil.convertBytes;
+
 @Component
 @RequiredArgsConstructor
 public class ScanTaskRequestHandler extends JobHandler<ScanTaskRequest> {
 	private final RoleRepository roleRepository;
 	private final MetafileRepository metafileRepository;
+	private final TaskService taskService;
 	private final FileSystemOptionsConfig fileSystemOptionsConfig;
 
 	@Override
@@ -57,7 +65,7 @@ public class ScanTaskRequestHandler extends JobHandler<ScanTaskRequest> {
 			FileStats fileStats = MetafileUtil.calculateFileStats(startDir);
 			LOGGER.info("File count: %s.".formatted(fileStats.fileCount));
 			LOGGER.info("Directory count %s.".formatted(fileStats.directoryCount));
-			LOGGER.info("Total size: %s.".formatted(fileStats.totalSize));
+			LOGGER.info("Total size: %s.".formatted(convertBytes(fileStats.totalSize)));
 
 			LOGGER.info("Starting recursive traversal...");
 
@@ -81,7 +89,7 @@ public class ScanTaskRequestHandler extends JobHandler<ScanTaskRequest> {
 								MetaFile metaFile = MetafileUtil.processSingleFile(
 									file,
 									inputUri,
-									parentMetafile.getId(),
+									parentMetafile,
 									config,
 									permissions
 								);
@@ -111,10 +119,13 @@ public class ScanTaskRequestHandler extends JobHandler<ScanTaskRequest> {
 			LOGGER.info("Input Metafile: Name: '%s'".formatted(start.getShortString()));
 
 			LOGGER.info("Saving to ElasticSearch...");
+			start.setPrevious(parentMetafile.getId());
 			parentMetafile.getChildren().add(start.getId());
 			metaFiles.add(parentMetafile);
 			metafileRepository.saveAll(metaFiles);
 			LOGGER.info("Done saving to ElasticSearch.");
+
+			registerAutomaticSync(start.getId(), config.getSyncConfig());
 
 			setProgress(100);
 			LOGGER.info("Completed.");
@@ -132,9 +143,24 @@ public class ScanTaskRequestHandler extends JobHandler<ScanTaskRequest> {
 
 	private void validateParameters(String inputPath, MetaFileConfig config, Permissions permissions) {
 		if (metafileRepository.findByBlobPath(inputPath).isPresent()) {
-			throw new IllegalArgumentException("This path is already scanned. Run a re-scan task to update.");
+			throw new InvalidArgumentsException("This path is already scanned. Run a sync task to update.");
 		}
 
 		roleRepository.rolesExist(permissions.getAllRoles());
+	}
+
+	private void registerAutomaticSync(String directoryId, SyncConfig config) {
+		if (config == null) {
+			LOGGER.info("Sync settings not set. Skipping.");
+		} else {
+			LOGGER.info("Registering automatic sync with cron '%s'".formatted(config.getCronExpression()));
+			taskService.scheduleSync(
+				SyncTaskParameters.Builder()
+													.withSyncConfig(config)
+													.withDirectoryId(directoryId)
+													.withFileConflictStrategy(ConflictStrategy.OVERRIDE) //TOOD add as parameter
+													.build()
+			);
+		}
 	}
 }

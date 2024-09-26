@@ -1,14 +1,11 @@
 package com.zendrive.api.rest.controller;
 
-import com.zendrive.api.core.model.dao.pgdb.user.User;
 import com.zendrive.api.core.model.dao.elastic.metafile.MetaFile;
-import com.zendrive.api.core.task.model.request.DeleteTaskRequest;
-import com.zendrive.api.exception.BadRequestException;
+import com.zendrive.api.exception.InvalidArgumentsException;
 import com.zendrive.api.rest.models.FileTreeViewDTO;
 import com.zendrive.api.core.service.metafile.MetafileService;
-import com.zendrive.api.rest.models.dto.job.CreateTaskResponse;
 import com.zendrive.api.rest.models.dto.metafile.*;
-import jakarta.servlet.http.HttpServletRequest;
+import com.zendrive.api.rest.models.dto.metafile.delete.BulkDeleteDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -28,27 +25,22 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-//@ApiVersion(1)
-@RequestMapping("api/metafile")
+@RequestMapping("/v1/metafile")
 @RequiredArgsConstructor
-public class MetafileController {
+public class MetafileController extends Controller {
 	private final MetafileService metafileService;
 
 	@RequestMapping(method = RequestMethod.GET, path = "/tree/root")
-	public ResponseEntity<FileTreeViewDTO> getRoot(
-		HttpServletRequest request
-	) {
-		User user = ((User) request.getAttribute("user"));
-		return ResponseEntity.ok(metafileService.getRootTree(user.getRoles()));
+	public ResponseEntity<FileTreeViewDTO> getRoot() {
+		LOGGER.info("Root file requested");
+		return ResponseEntity.ok(metafileService.getRootTree(getCurrentUser().getRoles()));
 	}
 
 	@RequestMapping(method = RequestMethod.GET, path = "/tree/{metafileId}")
 	public ResponseEntity<FileTreeViewDTO> get(
-		HttpServletRequest request,
 		@PathVariable String metafileId
 	) {
-		User user = ((User) request.getAttribute("user"));
-		return ResponseEntity.ok(metafileService.getTree(metafileId, user.getRoles()));
+		return ResponseEntity.ok(metafileService.getTree(metafileId, getCurrentUser().getRoles()));
 	}
 
 	@RequestMapping(method = RequestMethod.POST, path = "/exists")
@@ -60,7 +52,7 @@ public class MetafileController {
 	}
 
 	@RequestMapping(method = RequestMethod.GET, path = "{fileId}")
-	public ResponseEntity<Optional<MetaFile>> getFile(
+	public ResponseEntity<MetaFile> getFile(
 		@PathVariable String fileId
 	) {
 		return ResponseEntity.ok(metafileService.get(fileId));
@@ -82,26 +74,11 @@ public class MetafileController {
 		return ResponseEntity.ok(metafileService.bulkDelete(dto.getIds()));
 	}
 
-	@RequestMapping(method = RequestMethod.POST, path = "/delete/file/{metafileId}")
-	public ResponseEntity<Boolean> deleteFile(
+	@RequestMapping(method = RequestMethod.DELETE, path = "/{metafileId}/delete")
+	public ResponseEntity<Boolean> delete(
 		@PathVariable String metafileId
 	) {
 		return ResponseEntity.ok(metafileService.delete(metafileId));
-	}
-
-	@RequestMapping(method = RequestMethod.POST, path = "/delete/folder/bulk")
-	public ResponseEntity<List<CreateTaskResponse<DeleteTaskRequest>>> bulkDelete(
-		@RequestBody
-		@Valid BulkDeleteDto dto
-	) {
-		return ResponseEntity.ok(metafileService.bulkDeleteFolder(dto.getIds()));
-	}
-
-	@RequestMapping(method = RequestMethod.POST, path = "/delete/folder/{metafileId}")
-	public ResponseEntity<CreateTaskResponse<DeleteTaskRequest>> deleteFolder(
-		@PathVariable String metafileId
-	) {
-		return ResponseEntity.ok(metafileService.deleteFolder(metafileId));
 	}
 
 	@RequestMapping(method = RequestMethod.POST, path = "/search")
@@ -121,7 +98,7 @@ public class MetafileController {
 		try {
 			resourceResponse = metafileService.getBlobAsResource(metafileId);
 		} catch (MalformedURLException | FileNotFoundException e) {
-			throw new BadRequestException("File not found");
+			throw new InvalidArgumentsException("File not found");
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

@@ -1,161 +1,133 @@
-import { AxiosResponse } from "axios";
+import { RefreshCw } from "lucide-react";
 import { Task } from "@apiModels/task/Task";
+import { Toggle } from "@elements/ui/toggle";
 import { RootState } from "../../store/store";
+import { SelectionState } from "@store/slice";
 import { useNavigate } from "react-router-dom";
-import { TaskService } from "@services/TaskService";
-import { useEffect, useMemo, useState } from "react";
+import { TaskService } from "@services/task/TaskService";
+import { PageRequest } from "@apiModels/PageRequest";
 import { useDispatch, useSelector } from "react-redux";
 import { FilePage } from "@components/FilePage/FilePage";
+import { DataTable } from "@elements/DataTable/DataTable";
+import TaskRowSkeleton from "./components/TaskRowSkeleton";
 import { Table, ColumnDef, Row } from "@tanstack/react-table";
-import { TasksTable } from "@components/TasksTable/TasksTable";
-import { set_tasks_loading } from "@store/slice/taskTableSlice";
+import { AllTasksTableColumnDef } from "@pages/Tasks/Columns";
+import { MouseEvent, useEffect, useMemo, useState } from "react";
+import { set_manual_select_showed } from "@store/slice/userSlice";
 import Heading, { HeadingType } from "@components/Heading/Heading";
-import { TasksTableColumnDef } from "@components/TasksTable/components/Columns";
-import { PageRequest } from "@apiModels/PageRequest";
-import { Page } from "@apiModels/Page";
-import {
-	Pagination,
-	PaginationContent,
-	PaginationEllipsis,
-	PaginationItem,
-	PaginationLink,
-	PaginationNext,
-	PaginationPrevious
-} from "@elements/ui/pagination";
-import { cn } from "@utils/utils";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { TaskRowContextMenu } from "./components/TaskRowContextMenu";
+import SelectBoxCheckedIcon from "@assets/icons/SelectBoxCheckedIcon";
+import SelectBoxUncheckedIcon from "@assets/icons/SelectBoxUncheckedIcon";
+import { set_task_selection_state, set_tasks_loading } from "@store/slice/taskTableSlice";
+import { TasksService } from "@services/task/TasksService";
 
 export default function Tasks() {
 	const navigate = useNavigate();
 	const dispatch = useDispatch();
 
-	const [tasks, setTasks] = useState<Task[]>([]);
 	const [currentPage, setCurrentPage] = useState<number>(1);
 	const [pageSize, setPageSize] = useState<number>(10);
-	const [paginationPages, setPaginationPages] = useState<number[]>([]);
-	const [totalPages, setTotalPages] = useState<number>(0);
-
 	const [isInitialLoad, setInitialLoad] = useState<boolean>(true);
 
-	const columns: ColumnDef<Task>[] = useMemo<ColumnDef<Task>[]>(() => TasksTableColumnDef(), []);
+	const { manualSelectShown } = useSelector((state: RootState) => state.user);
+	const { selectionState, pollInterval } = useSelector((state: RootState) => state.taskTable);
+	const columns: ColumnDef<Task>[] = useMemo<ColumnDef<Task>[]>(() => AllTasksTableColumnDef(), []);
 
 	const {
-		areTasksLoading: tasksLoading,
-		runningTasks,
-		pollInterval
-	} = useSelector((state: RootState) => state.taskTable);
-
-	async function getAllTasks() {
-		dispatch(set_tasks_loading(true));
-
-		const response: AxiosResponse<Page<Task>> = await TaskService.getAll(
-			new PageRequest(currentPage - 1, pageSize, "updatedAt,desc")
-		);
-
-		if (response.status === 200) {
-			setTasks(response.data.content);
-			const pagesMax = response.data.totalPages;
-			const pagination = [];
-
-			if (currentPage - 1 > 0) {
-				pagination.push(currentPage - 1);
-			}
-
-			pagination.push(currentPage);
-
-			if (currentPage + 1 <= pagesMax) {
-				pagination.push(currentPage + 1);
-			}
-
-			setTotalPages(pagesMax);
-			setPaginationPages(pagination);
-
-			setInitialLoad(false);
-		}
-
-		dispatch(set_tasks_loading(false));
-	}
+		isLoading: tasksLoading,
+		data: tasksPage,
+		refetch
+	} = useQuery({
+		queryKey: ["tasks", currentPage],
+		queryFn: async () =>
+			(await TasksService.getPage(new PageRequest(currentPage - 1, pageSize, "createdAt,desc")))
+				.data,
+		refetchInterval: pollInterval,
+		placeholderData: keepPreviousData
+	});
 
 	useEffect(() => {
-		getAllTasks();
-		const intervalId = setInterval(getAllTasks, pollInterval);
-		return () => clearInterval(intervalId);
-	}, [runningTasks.length, pollInterval, currentPage]);
+		const params = new URLSearchParams();
+		params.set("page", currentPage.toString());
+		params.set("size", pageSize.toString());
+		navigate(`?${params.toString()}`, { replace: true });
+	}, [currentPage, pageSize, navigate]);
 
-	const handleRowClick = (_: Table<Task>, row: Row<Task> | null, __: any) => {
+	useEffect(() => {
+		setInitialLoad(false);
+		dispatch(set_tasks_loading(tasksLoading));
+	}, [tasksLoading]);
+
+	if (!tasksPage) {
+		return;
+	}
+
+	function handleManualSelect(state: boolean) {
+		dispatch(set_manual_select_showed(state));
+	}
+
+	const onRowDoubleClick = (
+		_: MouseEvent<HTMLTableRowElement>,
+		__: Table<Task>,
+		row: Row<Task>
+	) => {
 		if (row) {
 			navigate(`/tasks/${row.original.id}`);
 		}
 	};
 
-	const onPreviousPage = () => {
-		if (currentPage - 1 > 0) {
-			setCurrentPage(currentPage - 1);
-		}
-	};
-
-	const onNextPage = () => {
-		if (currentPage + 1 <= totalPages) {
-			setCurrentPage(currentPage + 1);
-		}
-	};
-
-	const onPaginationNumberClick = (page: number) => {
-		if (page <= totalPages) {
-			setCurrentPage(page);
-		}
+	const onSelectChange = (selectionState: SelectionState<Task>): Task[] => {
+		dispatch(set_task_selection_state(selectionState));
+		return selectionState.entities;
 	};
 
 	return (
 		<FilePage title="test">
 			<div className="relative flex flex-col justify-between gap-8 w-full overflow-hidden mt-4">
-				<div className="flex justify-between items-center mb-4">
+				<div className="flex items-center justify-start gap-4">
 					<Heading type={HeadingType.THREE} className="whitespace-nowrap">
 						Tasks
 					</Heading>
+
+					<RefreshCw
+						className="w-4 h-4 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+						onClick={() => refetch()}
+					/>
+
+					<div className="flex items-center justify-end gap-2 w-full">
+						<Toggle
+							value="manualSelect"
+							aria-label="Manual select"
+							defaultPressed={manualSelectShown}
+							onClick={() => handleManualSelect(!manualSelectShown)}
+						>
+							{manualSelectShown ? (
+								<SelectBoxCheckedIcon className="h-6 w-6" />
+							) : (
+								<SelectBoxUncheckedIcon className="h-6 w-6" />
+							)}
+						</Toggle>
+					</div>
 				</div>
 
 				<div className="flex flex-col justify-center gap-4">
-					<TasksTable
+					<DataTable
 						columns={columns}
-						data={tasks}
-						onRowClick={handleRowClick}
-						onRowBack={() => {}}
+						data={tasksPage?.content}
 						isLoading={tasksLoading}
 						isInitialLoad={isInitialLoad}
+						selectionState={selectionState}
+						rowSkeleton={TaskRowSkeleton}
+						onRowDoubleClick={onRowDoubleClick}
+						onSelectChange={onSelectChange}
+						rowContextMenu={TaskRowContextMenu}
+						pagination={{
+							current: currentPage,
+							totalPages: tasksPage?.totalPages!,
+							onPageChange: (page) => setCurrentPage(page)
+						}}
 					/>
-
-					<Pagination>
-						<PaginationContent>
-							<PaginationItem
-								className={cn(
-									"cursor-pointer",
-									tasksLoading || (currentPage === 1 && "cursor-not-allowed hover:bg-muted")
-								)}
-							>
-								<PaginationPrevious onClick={onPreviousPage} />
-							</PaginationItem>
-							{paginationPages.map((number, index) => {
-								return (
-									<PaginationItem key={index}>
-										<PaginationLink
-											onClick={() => onPaginationNumberClick(number)}
-											isActive={number == currentPage}
-										>
-											{number}
-										</PaginationLink>
-									</PaginationItem>
-								);
-							})}
-							{paginationPages.length < totalPages && currentPage < totalPages - 2 && (
-								<PaginationItem className="cursor-pointer">
-									<PaginationEllipsis />
-								</PaginationItem>
-							)}
-							<PaginationItem className="cursor-pointer">
-								<PaginationNext onClick={onNextPage} />
-							</PaginationItem>
-						</PaginationContent>
-					</Pagination>
 				</div>
 			</div>
 		</FilePage>

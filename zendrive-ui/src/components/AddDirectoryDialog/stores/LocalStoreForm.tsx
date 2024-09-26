@@ -22,76 +22,66 @@ import { useDispatch, useSelector } from "react-redux";
 import { ErrorResponse } from "@apiModels/ErrorResponse";
 import { MetafileService } from "@services/MetafileService";
 import { GenericMetafileDto } from "@apiModels/metafile/GenericMetafileDto";
-import {
-	next_step,
-	set_add_form_loading,
-	set_path,
-	set_file_stats
-} from "@store/slice/addDirectorySlice";
-import { FileStats } from "@apiModels/stats/FileStats";
-import { StatsService } from "@services/StatsService";
-import { StatsRequest } from "@apiModels/stats/StatsRequest";
+import { next_step, set_add_form_loading, set_path } from "@store/slice/addDirectorySlice";
 
 export interface LocalStoreFormProps {
 	submitRef: MutableRefObject<any>;
 }
 
+const LocalForm = z.object({
+	absolutePath: z.string().min(2, {
+		message: "Absolute path must be at least 2 characters."
+	})
+});
+
+type LocalFormData = z.infer<typeof LocalForm>;
+
 export function LocalStoreForm({ submitRef }: LocalStoreFormProps) {
 	const dispatch = useDispatch<AppDispatch>();
-	const { isLoading, config } = useSelector((state: RootState) => state.addDirectory);
+	const { isLoading, metafileConfig: config } = useSelector(
+		(state: RootState) => state.addDirectory
+	);
 
-	const FormSchema = z.object({
-		absolutePath: z.string().min(2, {
-			message: "Absolute path must be at least 2 characters."
-		})
-	});
-
-	const form = useForm<z.infer<typeof FormSchema>>({
-		resolver: zodResolver(FormSchema),
+	const form = useForm<LocalFormData>({
+		resolver: zodResolver(LocalForm),
 		defaultValues: {
 			absolutePath: config.inputPath || ""
 		}
 	});
 
-	async function onSubmit(data: z.infer<typeof FormSchema>): Promise<boolean> {
-		dispatch(set_add_form_loading(true));
-
-		const response: AxiosResponse<MetaFile | ErrorResponse> = await MetafileService.exists(
-			new GenericMetafileDto(data.absolutePath)
-		);
-
-		if (response.status === 200) {
-			form.setError("absolutePath", {
-				type: "validate",
-				message: "Path is already scanned, rescan to update!"
-			});
-			dispatch(set_add_form_loading(false));
-
-			return false;
+	function appendProtocol(path: string): string {
+		if (!path.startsWith("file://")) {
+			return `file://${path}`;
 		}
 
-		//todo decouple
-		const statsResponse: AxiosResponse<FileStats> = await StatsService.get(
-			new StatsRequest(data.absolutePath, config.storageConfig)
-		);
+		return path;
+	}
 
-		if (statsResponse.status === 200) {
-			dispatch(set_file_stats(statsResponse.data));
+	async function onSubmit(data: LocalFormData): Promise<boolean> {
+		dispatch(set_add_form_loading(true));
+
+		try {
+			const response: AxiosResponse<MetaFile, ErrorResponse> = await MetafileService.exists(
+				new GenericMetafileDto(appendProtocol(data.absolutePath))
+			);
+
+			if (response.status === 200) {
+				form.setError("absolutePath", {
+					type: "validate",
+					message: "Path is already scanned, rescan to update!"
+				});
+
+				dispatch(set_add_form_loading(false));
+
+				return false;
+			}
+		} catch (err) {
 			dispatch(set_add_form_loading(false));
 			dispatch(set_path(data.absolutePath));
 			dispatch(next_step());
-
-			return true;
-		} else {
-			dispatch(set_add_form_loading(false));
-
-			form.setError("root", {
-				type: "validate",
-				message: statsResponse.data || statsResponse.data.message
-			});
 		}
 
-		return false;
+		return true;
 	}
 
 	return (
@@ -117,7 +107,7 @@ export function LocalStoreForm({ submitRef }: LocalStoreFormProps) {
 							<FormItem>
 								<FormLabel>Absolute Path</FormLabel>
 								<FormControl>
-									<Input placeholder="/mnt/drive/path/to/directory" {...field} />
+									<Input placeholder="file:///mnt/drive/path/to/directory" {...field} />
 								</FormControl>
 								<FormDescription>
 									Absolute path to the directory. Make sure that this path never changes.

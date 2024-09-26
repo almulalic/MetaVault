@@ -5,7 +5,14 @@ import TasksSection from "./components/TasksSection";
 import AllTasksIcon from "@assets/icons/AllTasksIcon";
 import FavoritesSection from "./components/FavoritesSection";
 import { ButtonWithIcon } from "@elements/ButtonWithIcon/ButtonWithIcon";
-import { FolderRoot, Share2Icon, FolderClock, Settings, Search } from "lucide-react";
+import {
+	Settings,
+	FolderRoot,
+	Share2Icon,
+	FolderClock,
+	FolderSearch,
+	CalendarCheck
+} from "lucide-react";
 
 export interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
 	className?: string;
@@ -38,7 +45,7 @@ export function Sidebar({ className }: SidebarProps) {
 							onClick={() => navigate("/files/tree")}
 						/>
 						<ButtonWithIcon
-							icon={<Search />}
+							icon={<FolderSearch />}
 							label="Search"
 							onClick={() => navigate("/files/search")}
 						/>
@@ -57,6 +64,12 @@ export function Sidebar({ className }: SidebarProps) {
 							icon={<AllTasksIcon />}
 							label="All Tasks"
 							onClick={() => navigate("/tasks")}
+						/>
+
+						<ButtonWithIcon
+							icon={<CalendarCheck />}
+							label="Recurring Tasks"
+							onClick={() => navigate("/tasks/recurring")}
 						/>
 
 						<Separator className="m-2" />

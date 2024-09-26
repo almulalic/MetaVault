@@ -14,11 +14,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder(builderMethodName = "Builder", builderClassName = "Builder", setterPrefix = "with")
 public class ScanTaskParameters {
-	@NotNull
+	@NotNull(message = "Config must not be null!")
 	@Valid
 	private MetaFileConfig config;
 
-	@NotNull
+	@NotNull(message = "Permissions must not be null!")
 	@Valid
 	private Permissions permissions;
 

@@ -11,7 +11,7 @@ type ButtonWithIconProps = {
 export function ButtonWithIcon({ icon, label, onClick, href }: ButtonWithIconProps) {
 	return (
 		<a onClick={onClick} className="cursor-pointer" href={href}>
-			<Button variant="ghost" className="w-full flex gap-2 justify-start text-sm c">
+			<Button variant="ghost" className="w-full flex gap-2 justify-start text-sm">
 				{icon}
 				{label}
 			</Button>

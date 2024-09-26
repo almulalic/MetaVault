@@ -5,10 +5,8 @@ import { MetaFile } from "@apiModels/metafile";
 import { FileTreeViewDTO } from "@apiModels/FileTreeView";
 import { BulkGetDto } from "@apiModels/metafile/dto/BulkGetDto";
 import { SearchRequest } from "@apiModels/metafile/dto/SearchRequest";
-import { CreateTaskResponse } from "@apiModels/task/CreateTaskResponse";
-import { DeleteTaskRequest } from "@apiModels/task/implementation/DeleteTask";
-import { MetafileBulkDeleteDto } from "@apiModels/metafile/dto/MetafileBulkDeleteDto";
 import { GenericMetafileDto } from "@apiModels/metafile/GenericMetafileDto";
+import { MetafileBulkDeleteDto } from "@apiModels/metafile/dto/delete/MetafileBulkDeleteDto";
 
 export class MetafileService {
 	static async getRoot(): Promise<AxiosResponse<FileTreeViewDTO>> {
@@ -27,24 +25,12 @@ export class MetafileService {
 		return authorizedAxiosApp.post(`metafile/find/bulk`, dto);
 	}
 
-	static async bulkFileDelete(data: MetafileBulkDeleteDto): Promise<AxiosResponse> {
-		return authorizedAxiosApp.post(`metafile/delete/file/bulk`, data);
+	static async bulkDelete(dto: MetafileBulkDeleteDto): Promise<AxiosResponse> {
+		return authorizedAxiosApp.delete(`metafile/bulk`, { data: dto });
 	}
 
-	static async fileDelete(id: string): Promise<AxiosResponse> {
-		return authorizedAxiosApp.post(`metafile/delete/file/${id}`);
-	}
-
-	static async bulkFolderDelete(
-		data: MetafileBulkDeleteDto
-	): Promise<AxiosResponse<CreateTaskResponse<DeleteTaskRequest>[]>> {
-		return authorizedAxiosApp.post(`metafile/delete/folder/bulk`, data);
-	}
-
-	static async folderDelete(
-		id: string
-	): Promise<AxiosResponse<CreateTaskResponse<DeleteTaskRequest>>> {
-		return authorizedAxiosApp.post(`metafile/delete/folder/${id}`);
+	static async delete(id: string): Promise<AxiosResponse<boolean>> {
+		return authorizedAxiosApp.delete(`metafile/${id}/delete`);
 	}
 
 	static async search(dto: SearchRequest): Promise<AxiosResponse<Page<MetaFile>>> {

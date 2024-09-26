@@ -1,47 +1,104 @@
-import { useDispatch, useSelector } from "react-redux";
-import Heading, { HeadingType } from "@components/Heading/Heading";
 import {
 	Form,
-	FormControl,
-	FormDescription,
-	FormField,
 	FormItem,
+	FormField,
 	FormLabel,
-	FormMessage
+	FormMessage,
+	FormControl,
+	FormDescription
 } from "@elements/ui/form";
 import { z } from "zod";
 import { MutableRefObject } from "react";
 import { RootState } from "@store/store";
 import { useForm } from "react-hook-form";
+import { Input } from "@elements/ui/input";
+import { camelCaseToWords, isValidCron } from "@utils/utils";
 import { Checkbox } from "@elements/ui/checkbox";
 import { Separator } from "@elements/ui/separator";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useDispatch, useSelector } from "react-redux";
+import Heading, { HeadingType } from "@components/Heading/Heading";
 import { change_config, next_step } from "@store/slice/addDirectorySlice";
+import { ConflictStrategy } from "@apiModels/task/ConflictStrategy";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@elements/ui/select";
 
 export interface ConfigFormProps {
 	submitRef: MutableRefObject<any>;
 }
 
-const FormSchema = z.object({
-	sync: z.boolean().default(false),
-	syncPeriod: z.string().optional()
-});
+const ConfigFormSchema = z
+	.object({
+		sync: z.boolean().default(false),
+		cronExpression: z.string().optional(),
+		maxConcurrency: z.coerce.number().min(1, "Minimum concurrency is 1."),
+		fileConflictStrategy: z
+			.enum([ConflictStrategy.OVERRIDE, ConflictStrategy.IGNORE, ConflictStrategy.PANIC])
+			.optional()
+	})
+	.refine(
+		(data) => {
+			return !(data.sync && !data.cronExpression);
+		},
+		{
+			message: "Cron Expression is required when sync is set to true.",
+			path: ["cronExpression"]
+		}
+	)
+	.refine(
+		(data) => {
+			return !data.sync || (data.cronExpression && isValidCron(data.cronExpression));
+		},
+		{
+			message: "Must be a valid cron expression.",
+			path: ["cronExpression"]
+		}
+	)
+	.refine(
+		(data) => {
+			return !data.sync || data.fileConflictStrategy;
+		},
+		{
+			message: "File conflict strategy is required when sync is set to true.",
+			path: ["fileConflictStrategy"]
+		}
+	);
+
+type ConfigFormData = z.infer<typeof ConfigFormSchema>;
 
 export function ConfigForm({ submitRef }: ConfigFormProps) {
 	const dispatch = useDispatch();
-	const { config } = useSelector((state: RootState) => state.addDirectory);
+	const { metafileConfig: config } = useSelector((state: RootState) => state.addDirectory);
 
-	const form = useForm<z.infer<typeof FormSchema>>({
-		resolver: zodResolver(FormSchema),
+	const form = useForm<ConfigFormData>({
+		resolver: zodResolver(ConfigFormSchema),
 		defaultValues: {
-			sync: config.sync,
-			syncPeriod: ""
+			sync: config.syncConfig !== null,
+			cronExpression: config.syncConfig ? config.syncConfig.cronExpression : "",
+			maxConcurrency: config.syncConfig ? config.syncConfig.maxConcurrency : 1,
+			fileConflictStrategy: config.syncConfig
+				? config.syncConfig.fileConflictStrategy
+				: ConflictStrategy.OVERRIDE
 		}
 	});
 
-	function onSubmit(data: z.infer<typeof FormSchema>) {
-		dispatch(change_config({ ...config, sync: data.sync }));
+	function onSubmit(data: ConfigFormData): void {
+		if (data.sync) {
+			if (data.cronExpression && data.fileConflictStrategy) {
+				dispatch(
+					change_config({
+						...config,
+						syncConfig: {
+							cronExpression: data.cronExpression,
+							maxConcurrency: data.maxConcurrency,
+							fileConflictStrategy: data.fileConflictStrategy
+						}
+					})
+				);
+			}
+		} else {
+			dispatch(change_config({ ...config, syncConfig: null }));
+		}
+
 		dispatch(next_step());
 	}
 
@@ -82,32 +139,65 @@ export function ConfigForm({ submitRef }: ConfigFormProps) {
 					/>
 
 					{form.getValues("sync") && (
-						<div className="ml-4">
+						<div className="ml-8 space-y-4">
 							<FormField
 								control={form.control}
-								name="syncPeriod"
+								name="cronExpression"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Sync Period</FormLabel>
-										<Select
-											disabled={field.disabled}
-											onValueChange={field.onChange}
-											defaultValue={field.value}
-										>
-											<FormControl>
-												<SelectTrigger>
-													<SelectValue placeholder="Select a time period" />
-												</SelectTrigger>
-											</FormControl>
+										<FormLabel>Cron Expression</FormLabel>
+										<FormControl>
+											<Input placeholder="5 * * * *" {...field} />
+										</FormControl>
 
-											<SelectContent>
-												<SelectItem value="hour">Hourly</SelectItem>
-												<SelectItem value="day">Daily</SelectItem>
-												<SelectItem value="month">Monthly</SelectItem>
-												<SelectItem value="year">Yearly</SelectItem>
-											</SelectContent>
-										</Select>
-										<FormDescription>Choose the time period for syncing changes.</FormDescription>
+										<FormDescription>CRON expression which specifies the schedule.</FormDescription>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="fileConflictStrategy"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Conflict Strategy</FormLabel>
+										<FormControl>
+											<Select onValueChange={field.onChange} defaultValue={field.value}>
+												<SelectTrigger>
+													<SelectValue placeholder="Select Conflict Strategy" />
+												</SelectTrigger>
+												<SelectContent>
+													{Object.values(ConflictStrategy).map((strategy) => (
+														<SelectItem key={strategy} value={strategy}>
+															{camelCaseToWords(strategy)}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</FormControl>
+
+										<FormDescription>
+											Defines how are conflicting files going to be handled
+										</FormDescription>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="maxConcurrency"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Maximum number of concurrent tasks</FormLabel>
+										<FormControl>
+											<Input type="number" placeholder="1" {...field} />
+										</FormControl>
+
+										<FormDescription>
+											Maximum number of concurrent jobs that can be active at the same time.
+										</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}

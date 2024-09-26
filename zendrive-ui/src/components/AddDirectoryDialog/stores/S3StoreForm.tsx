@@ -1,11 +1,11 @@
 import {
 	Form,
-	FormControl,
-	FormDescription,
-	FormField,
 	FormItem,
+	FormField,
 	FormLabel,
-	FormMessage
+	FormMessage,
+	FormControl,
+	FormDescription
 } from "@elements/ui/form";
 import { z } from "zod";
 import { AxiosResponse } from "axios";
@@ -26,13 +26,8 @@ import {
 	next_step,
 	set_add_form_loading,
 	set_path,
-	set_file_stats,
 	set_storage_crednetials
 } from "@store/slice/addDirectorySlice";
-import { FileStats } from "@apiModels/stats/FileStats";
-import { StatsService } from "@services/StatsService";
-import { StatsRequest } from "@apiModels/stats/StatsRequest";
-import { StorageConfig } from "@apiModels/metafile/StorageConfig";
 
 export interface S3FormProps {
 	submitRef: MutableRefObject<any>;
@@ -40,7 +35,9 @@ export interface S3FormProps {
 
 export function S3StoreForm({ submitRef }: S3FormProps) {
 	const dispatch = useDispatch<AppDispatch>();
-	const { isLoading, config } = useSelector((state: RootState) => state.addDirectory);
+	const { isLoading, metafileConfig: config } = useSelector(
+		(state: RootState) => state.addDirectory
+	);
 
 	const FormSchema = z.object({
 		s3Url: z
@@ -61,51 +58,32 @@ export function S3StoreForm({ submitRef }: S3FormProps) {
 		resolver: zodResolver(FormSchema),
 		defaultValues: {
 			s3Url: config.inputPath || "",
-			credentials: ""
+			credentials: config.storageConfig.credentials || ""
 		}
 	});
 
 	async function onSubmit(data: z.infer<typeof FormSchema>): Promise<boolean> {
 		dispatch(set_add_form_loading(true));
 
-		const response: AxiosResponse<MetaFile | ErrorResponse> = await MetafileService.exists(
-			new GenericMetafileDto(data.s3Url)
-		);
+		try {
+			const response: AxiosResponse<MetaFile | ErrorResponse> = await MetafileService.exists(
+				new GenericMetafileDto(data.s3Url)
+			);
 
-		if (response.status === 200) {
-			form.setError("s3Url", {
-				type: "validate",
-				message: "Path is already scanned, rescan to update!"
-			});
+			if (response.status === 200) {
+				form.setError("s3Url", {
+					type: "validate",
+					message: "Path is already scanned, rescan to update!"
+				});
 
-			dispatch(set_add_form_loading(false));
-			return false;
-		}
-
-		const statsResponse: AxiosResponse<FileStats> = await StatsService.get(
-			new StatsRequest(data.s3Url, new StorageConfig(config.storageConfig.type, data.credentials))
-		);
-
-		if (statsResponse.status === 200) {
-			dispatch(set_file_stats(statsResponse.data));
+				dispatch(set_add_form_loading(false));
+				return false;
+			}
+		} catch (err) {
 			dispatch(set_add_form_loading(false));
 			dispatch(set_path(data.s3Url));
 			dispatch(set_storage_crednetials(data.credentials));
 			dispatch(next_step());
-
-			form.setError("root", {
-				type: "validate",
-				message: "Server error!"
-			});
-
-			return true;
-		} else {
-			dispatch(set_add_form_loading(false));
-
-			form.setError("root", {
-				type: "validate",
-				message: statsResponse.data || statsResponse.data.message
-			});
 		}
 
 		return false;

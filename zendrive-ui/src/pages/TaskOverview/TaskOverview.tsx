@@ -2,7 +2,7 @@ import { AxiosResponse } from "axios";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Badge } from "@elements/ui/badge";
 import { useEffect, useRef, useState } from "react";
-import { TaskService } from "@services/TaskService";
+import { TaskService } from "@services/task/TaskService";
 import { FilePage } from "@components/FilePage/FilePage";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { useNavigate, useParams } from "react-router-dom";
@@ -27,6 +27,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { set_follow_log_output } from "@store/slice/userSlice";
 import { Card, CardContent, CardHeader, CardTitle } from "@elements/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@elements/ui/tabs";
+import { toast } from "@elements/ui/use-toast";
+import { ErrorResponse } from "@apiModels/ErrorResponse";
 
 enum TaskOverviewTabs {
 	LOGS,
@@ -49,9 +51,9 @@ export default function TaskOverview() {
 	async function getTaskData(taskId: string) {
 		setLoading(true);
 
-		const response: AxiosResponse<Task> = await TaskService.get(taskId);
+		try {
+			const response: AxiosResponse<Task> = await TaskService.get(taskId);
 
-		if (response.status === 200) {
 			setTask(response.data);
 
 			if (
@@ -59,9 +61,10 @@ export default function TaskOverview() {
 			) {
 				setPollInterval(5000);
 			}
+		} catch (err) {
+		} finally {
+			setLoading(false);
 		}
-
-		setLoading(false);
 	}
 
 	const scrollableLogsRef = useRef<HTMLDivElement>(null);
@@ -82,6 +85,26 @@ export default function TaskOverview() {
 		dispatch(set_follow_log_output(!followLogOutput));
 	};
 
+	async function handleTaskDelete() {
+		if (taskId) {
+			try {
+				await TaskService.stop(taskId);
+
+				toast({
+					title: `Sucessfully deleted ${taskId}`
+				});
+				navigate("/tasks");
+			} catch (err) {
+				if (err instanceof ErrorResponse) {
+					toast({
+						title: `Something went wrong`,
+						description: err.message
+					});
+				}
+			}
+		}
+	}
+
 	return (
 		<FilePage title="test">
 			<div
@@ -93,31 +116,23 @@ export default function TaskOverview() {
 			</div>
 
 			<div className="relative flex flex-col justify-between gap-4 w-full overflow-hidden mt-4">
-				<div className="flex justify-start items-center gap-2">
-					{task && TaskRunningStates.includes(task.state) && (
-						<Loader2 className="w-8 h-8 animate-spin" />
-					)}
-
-					<Heading
-						type={HeadingType.TWO}
-						className="whitespace-nowrap flex justify-center items-start gap-4 p-0"
-					>
-						{task && task.data.name ? task.data.name : `Task ${taskId}`}
-					</Heading>
-				</div>
 				{task && (
 					<div className="">
 						<Card className="mb-6">
 							<CardHeader className="flex w-full gap-4">
 								<div className="flex justify-between">
-									<div className="flex gap-4">
-										{task && (
-											<Badge variant="outline" className={cn("my-2", taskStateColor[task.state])}>
-												<span className="font-medium text-sm">{task.state}</span>
-											</Badge>
+									<div className="flex items-center gap-4">
+										{task && TaskRunningStates.includes(task.state) && (
+											<Loader2 className="w-10 h-10 animate-spin" />
 										)}
 
 										<div>
+											{task && (
+												<Badge variant="outline" className={cn("my-2", taskStateColor[task.state])}>
+													<span className="font-medium text-sm">{task.state}</span>
+												</Badge>
+											)}
+
 											<CardTitle className="text-xxl flex items-center gap-4">
 												{task.data.name}
 											</CardTitle>
@@ -128,7 +143,9 @@ export default function TaskOverview() {
 									<div className="flex justify-between items-center gap-4">
 										<Button>Rerun</Button>
 
-										<Button variant="destructive">Delete</Button>
+										<Button variant="destructive" onClick={handleTaskDelete}>
+											Delete
+										</Button>
 									</div>
 								</div>
 							</CardHeader>
@@ -139,13 +156,13 @@ export default function TaskOverview() {
 										size="md"
 										className={cn("h-5 text-xl")}
 										value={
-											task.data.metadata.taskRunrDashboardProgressBar2
-												? task.data.metadata.taskRunrDashboardProgressBar2.progress
+											task.data.metadata.taskRunrDashboardProgressBar
+												? task.data.metadata.taskRunrDashboardProgressBar.progress
 												: 0
 										}
 										max={
-											task.data.metadata.taskRunrDashboardProgressBar2
-												? task.data.metadata.taskRunrDashboardProgressBar2.totalAmount
+											task.data.metadata.taskRunrDashboardProgressBar
+												? task.data.metadata.taskRunrDashboardProgressBar.totalAmount
 												: 10000
 										}
 									/>
@@ -192,8 +209,8 @@ export default function TaskOverview() {
 												className="h-[400px] px-1 divide-y divide-gray-500 overflow-y-scroll"
 												ref={scrollableLogsRef}
 											>
-												{task.data.metadata.taskRunrDashboardLog2 &&
-													task.data.metadata.taskRunrDashboardLog2.logLines.map(
+												{task.data.metadata.taskRunrDashboardLog &&
+													task.data.metadata.taskRunrDashboardLog.logLines.map(
 														(log: TaskLogLine, index: number) => (
 															<div key={index} className="py-2 flex items-center cursor-pointer">
 																<Badge

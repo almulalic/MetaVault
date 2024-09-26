@@ -2,6 +2,8 @@ export * from "./addDirectorySlice";
 export * from "./appSlice";
 export * from "./authSlice";
 export * from "./fileTableSlice";
+export * from "./recurringTaskTableSlice";
 export * from "./runTaskSlice";
+export * from "./searchSlice";
 export * from "./taskTableSlice";
 export * from "./userSlice";

@@ -20,7 +20,7 @@ public class TaskDataAttributeConverter implements AttributeConverter<TaskData, 
 		try {
 			return objectMapper.writeValueAsString(address);
 		} catch (JsonProcessingException jpe) {
-			System.out.println("Cannot convert Address into JSON");
+			System.out.println("Cannot convert TaskData into JSON");
 			return null;
 		}
 	}

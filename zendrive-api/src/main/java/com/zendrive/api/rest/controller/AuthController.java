@@ -19,9 +19,9 @@ import java.util.List;
  * Controller class for handling authentication-related requests.
  */
 @RestController
-@RequestMapping("api/auth")
+@RequestMapping("/v1/auth")
 @RequiredArgsConstructor
-public class AuthController {
+public class AuthController extends Controller {
 
 	private final AuthService authService;
 
@@ -29,10 +29,12 @@ public class AuthController {
 	public ResponseEntity<List<UserDto>> searchUsers(
 		@RequestParam(required = false) String searchText
 	) {
-		return ResponseEntity.ok(this.authService.getUsers(searchText)
-																						 .stream()
-																						 .map(UserDto::new)
-																						 .toList());
+		return ResponseEntity.ok(
+			this.authService.getUsers(searchText)
+											.stream()
+											.map(UserDto::new)
+											.toList()
+		);
 	}
 
 	@RequestMapping(method = RequestMethod.PUT, path = "/user/edit/role")
@@ -53,7 +55,7 @@ public class AuthController {
 		return ResponseEntity.ok(new UserDto(this.authService.createUser(dto)));
 	}
 
-	@RequestMapping(method = RequestMethod.POST, path = "/token/valdate")
+	@RequestMapping(method = RequestMethod.POST, path = "/token/validate")
 	public ResponseEntity<Boolean> validateToken() {
 		return ResponseEntity.ok(true);
 	}

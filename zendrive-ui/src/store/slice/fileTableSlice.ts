@@ -1,23 +1,22 @@
 import { MetaFile } from "@apiModels/metafile";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-export interface SelectionState {
+export interface SelectionState<T> {
 	start: number;
 	end: number;
+	entities: T[];
 }
 
 export interface FileTableState {
 	isLoading: boolean;
-	selectedMetafiles: MetaFile[];
 	currentMetafile: MetaFile | null;
 	activeMetafile: MetaFile | null;
-	selectionState: SelectionState | null;
+	selectionState: SelectionState<MetaFile>;
 }
 
 const initialState: FileTableState = {
-	selectionState: { start: 0, end: 0 },
+	selectionState: { start: 0, end: 0, entities: [] },
 	isLoading: false,
-	selectedMetafiles: [],
 	activeMetafile: null,
 	currentMetafile: null
 };
@@ -27,22 +26,20 @@ const fileTableSlice = createSlice({
 	initialState,
 	reducers: {
 		reset_file_table_state: () => initialState,
-		set_selection_state: (state: FileTableState, data: PayloadAction<SelectionState | null>) => {
+		set_selection_state: (state: FileTableState, data: PayloadAction<SelectionState<MetaFile>>) => {
 			state.selectionState = data.payload;
 		},
 		set_files_loading: (state: FileTableState, data: PayloadAction<boolean>) => {
 			state.isLoading = data.payload;
 		},
-		set_selected_metafiles: (state: FileTableState, data: PayloadAction<MetaFile[]>) => {
-			state.selectedMetafiles = data.payload;
-		},
+
 		set_current_metafile: (state: FileTableState, data: PayloadAction<MetaFile | null>) => {
 			state.currentMetafile = data.payload;
-			state.selectedMetafiles = [];
+			state.selectionState.entities = [];
 			state.activeMetafile = data.payload;
 		},
 		set_current_as_selected: (state: FileTableState) => {
-			state.selectedMetafiles = state.currentMetafile ? [state.currentMetafile] : [];
+			state.selectionState.entities = state.currentMetafile ? [state.currentMetafile] : [];
 		},
 		set_active_metafile: (state: FileTableState, data: PayloadAction<MetaFile | null>) => {
 			state.activeMetafile = data.payload;
@@ -51,13 +48,12 @@ const fileTableSlice = createSlice({
 });
 
 export const {
-	reset_file_table_state,
-	set_selection_state,
 	set_files_loading,
-	set_selected_metafiles,
+	set_active_metafile,
+	set_selection_state,
 	set_current_metafile,
-	set_current_as_selected,
-	set_active_metafile
+	reset_file_table_state,
+	set_current_as_selected
 } = fileTableSlice.actions;
 
 export const fileTableReducer = fileTableSlice.reducer;

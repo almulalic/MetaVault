@@ -2,7 +2,7 @@ package com.zendrive.api.metafile;
 
 import com.zendrive.api.configuration.MinioConfig;
 import com.zendrive.api.core.model.metafile.Breadcrumb;
-import com.zendrive.api.core.model.metafile.StorageConfig;
+import com.zendrive.api.core.model.task.StorageConfig;
 import com.zendrive.api.core.model.metafile.StorageType;
 import com.zendrive.api.core.utils.MetafileUtil;
 import org.apache.commons.vfs2.*;

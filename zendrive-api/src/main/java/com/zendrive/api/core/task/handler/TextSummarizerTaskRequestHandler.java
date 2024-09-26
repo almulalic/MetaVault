@@ -5,44 +5,33 @@ import com.zendrive.api.core.model.dao.elastic.metafile.MetaFile;
 import com.zendrive.api.core.model.task.ConflictStrategy;
 import com.zendrive.api.core.repository.zendrive.elastic.MetafileRepository;
 import com.zendrive.api.core.service.metafile.MetafileService;
-import com.zendrive.api.core.task.model.parameters.tesseract.TesseractParameters;
-import com.zendrive.api.core.task.model.request.TesseractOcrTaskRequest;
 import com.zendrive.api.core.task.model.request.TextSummarizerTaskRequest;
-import com.zendrive.api.exception.BadRequestException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-import net.sourceforge.tess4j.Tesseract;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
+import software.amazon.awssdk.services.s3.S3Client;
 
-import javax.imageio.ImageIO;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class TextSummarizerTaskRequestHandler extends JobHandler<TextSummarizerTaskRequest> {
 	private final MetafileRepository metafileRepository;
 	private final MetafileService metafileService;
-
-	public TextSummarizerTaskRequestHandler(
-		MetafileRepository metafileRepository,
-		MetafileService metafileService
-	) {
-		this.metafileRepository = metafileRepository;
-		this.metafileService = metafileService;
-	}
+	private final S3Client minioS3Client;
 
 	@Override
 	public void execute(TextSummarizerTaskRequest jobRequest) throws IOException, InterruptedException {
 		try {
+			setS3Client(minioS3Client);
 			String directoryId = jobRequest.parameters().getDirectoryId();
 			String destinationKey = jobRequest.parameters().getDestinationKey();
 			ConflictStrategy keyConflictStrategy = jobRequest.parameters().getConflictStrategy();
@@ -53,8 +42,7 @@ public class TextSummarizerTaskRequestHandler extends JobHandler<TextSummarizerT
 
 			LOGGER.info("Initializing 'Text Summarizer Task' for directory: " + directoryId);
 
-			MetaFile start = metafileService.get(directoryId)
-																			.orElseThrow(() -> new BadRequestException("Start not found"));
+			MetaFile start = metafileService.get(directoryId);
 			LOGGER.info("Starting from %s".formatted(start.getId()));
 			progressBar.setProgress(5);
 
@@ -66,11 +54,7 @@ public class TextSummarizerTaskRequestHandler extends JobHandler<TextSummarizerT
 			LOGGER.info("Got %s metafiles before filter.".formatted(metaFiles.size()));
 
 			if (extensionsWhitelist.size() > 0) {
-				LOGGER.info("Applying extension whitelist filter. Allowed extensions: %s".formatted(extensionsWhitelist));
-
-				metaFiles = metaFiles.stream()
-														 .filter(x -> extensionsWhitelist.contains(StringUtils.getFilenameExtension(x.getBlobPath())))
-														 .toList();
+				metaFiles = applyExtensionsWhitelist(metaFiles, extensionsWhitelist);
 			}
 
 			if (keyConflictStrategy == ConflictStrategy.PANIC) {

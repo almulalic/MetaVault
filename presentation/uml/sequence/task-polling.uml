@@ -1,0 +1,32 @@
+@startuml
+actor User
+participant UI
+participant "Task Controller" as TC
+participant "Task Service" as TS
+participant "Task Poller" as TP
+participant "Task Executor" as TE
+participant Database
+
+User -> UI: Submit task run form
+UI -> TC: Submit payload
+TC -> TS: Schedule task for execution
+TS -> TC: Return ID
+TC -> UI: Return Response
+UI -> User: Redirect to Task Overview for given ID
+
+TP -> TS: Poll for a new task
+TS -> TP: Return task request
+TP -> TE: Execute task
+
+TE -> Database: Write incremental updates
+
+User -> UI: Open the Task Overivew page
+loop Every Polling Interval [Default 3s]
+  UI -> TS: Request Task State
+  TS -> Database: Fetch Task State
+  Database -> TS: Return Task State
+  TS -> UI: Send Task State
+  UI -> User: Update Task Overview
+end
+
+@enduml

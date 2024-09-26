@@ -14,16 +14,14 @@ const root = ReactDOM.createRoot(document.getElementById("root")!);
 const queryClient = new QueryClient();
 
 root.render(
-	<React.StrictMode>
-		<BrowserRouter>
-			<QueryClientProvider client={queryClient}>
-				<Provider store={store}>
-					<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-						<App />
-						<Toaster />
-					</ThemeProvider>
-				</Provider>
-			</QueryClientProvider>
-		</BrowserRouter>
-	</React.StrictMode>
+	<BrowserRouter>
+		<QueryClientProvider client={queryClient}>
+			<Provider store={store}>
+				<ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+					<App />
+					<Toaster />
+				</ThemeProvider>
+			</Provider>
+		</QueryClientProvider>
+	</BrowserRouter>
 );

@@ -1,11 +1,12 @@
 import { DateTime } from "luxon";
+import { isFolder } from "@utils/metafile";
 import { convertBytes } from "@utils/utils";
 import { toast } from "@elements/ui/use-toast";
 import { Checkbox } from "@elements/ui/checkbox";
 import { ColumnDef } from "@tanstack/react-table";
 import { MetaFile } from "@apiModels/metafile/MetaFile";
 import { FileTextIcon, FolderIcon } from "lucide-react";
-import { isFolder } from "@utils/metafile";
+import { DATE_TIME_FORMAT } from "@constants/constants";
 
 export const RecentFileColumnDef: ColumnDef<MetaFile>[] = [
 	{
@@ -80,12 +81,11 @@ export const RecentFileColumnDef: ColumnDef<MetaFile>[] = [
 		accessorKey: "lastModifiedMs",
 		header: "Last Modified",
 		cell: ({ row }) =>
-			DateTime.fromMillis(row.original.lastModifiedMs || 0).toFormat("dd-MM-yyyy HH:mm:ss")
+			DateTime.fromMillis(row.original.lastModifiedMs || 0).toFormat(DATE_TIME_FORMAT)
 	},
 	{
 		accessorKey: "lastSyncedMs",
 		header: "Last Sync",
-		cell: ({ row }) =>
-			DateTime.fromMillis(row.original.lastSyncMs || 0).toFormat("dd-MM-yyyy HH:mm:ss")
+		cell: ({ row }) => DateTime.fromMillis(row.original.lastSyncMs || 0).toFormat(DATE_TIME_FORMAT)
 	}
 ];

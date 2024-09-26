@@ -5,7 +5,9 @@ import Heading, { HeadingType } from "@components/Heading/Heading";
 import { StorageType } from "@apiModels/metafile/StorageType";
 
 export function FinalizeStep() {
-	const { config, permissions } = useSelector((state: RootState) => state.addDirectory);
+	const { metafileConfig: config, permissions } = useSelector(
+		(state: RootState) => state.addDirectory
+	);
 
 	return (
 		<div className="flex flex-col gap-4 ">
@@ -46,8 +48,27 @@ export function FinalizeStep() {
 
 				<div className="flex items-center gap-2">
 					<span className="font-medium text-gray-100">Sync:</span>
-					<span>{config.sync ? "True" : "False"}</span>
+					<span>{config.syncConfig ? "True" : "False"}</span>
 				</div>
+
+				{config.syncConfig && (
+					<div>
+						<div className="flex items-center gap-2">
+							<span className="font-medium text-gray-100">Cron Expression:</span>
+							<span>{config.syncConfig.cronExpression}</span>
+						</div>
+
+						<div className="flex items-center gap-2">
+							<span className="font-medium text-gray-100">File conflict strategy:</span>
+							<span>{config.syncConfig.fileConflictStrategy}</span>
+						</div>
+
+						<div className="flex items-center gap-2">
+							<span className="font-medium text-gray-100">Max Concurrency:</span>
+							<span>{config.syncConfig.maxConcurrency}</span>
+						</div>
+					</div>
+				)}
 			</div>
 		</div>
 	);

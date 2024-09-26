@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { RootState } from "@store/store";
 import { Task } from "@apiModels/task/Task";
 import { useNavigate } from "react-router-dom";
-import { TaskService } from "@services/TaskService";
+import { TaskService } from "@services/task/TaskService";
 import { ScrollArea } from "@elements/ui/scroll-area";
 import { useDispatch, useSelector } from "react-redux";
 import { set_running_tasks } from "@store/slice/taskTableSlice";

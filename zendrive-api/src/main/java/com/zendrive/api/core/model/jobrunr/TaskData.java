@@ -1,11 +1,13 @@
 package com.zendrive.api.core.model.jobrunr;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 
@@ -30,4 +32,14 @@ public class TaskData {
 	@JsonAlias({ "jobDetails" })
 	@JsonProperty("details")
 	private TaskDetails details;
+	@JsonAlias({ "createdAt" })
+	private Instant createdAt;
+	@JsonAlias({ "scheduledAt" })
+	private long scheduledAt;
+	@JsonAlias({ "recurringJobId" })
+	private String recurringJobId;
+	@JsonAlias({ "scheduleExpression" })
+	private String scheduleExpression;
+	@JsonAlias({ "zoneId" })
+	private String zoneId;
 }

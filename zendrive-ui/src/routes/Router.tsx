@@ -8,6 +8,7 @@ import { EditUserForm } from "@components/EditUserForm/EditUserForm";
 import UserManagementForm from "@components/UserManagementForm/UserManagementForm";
 import AddUserForm from "@components/AddUserForm/AddUserForm";
 import SearchFiles from "@pages/SearchFiles/SearchFiles";
+import RecurringTasks from "@pages/RecurringTasks/RecurringTasks";
 
 export default function Router() {
 	return (
@@ -98,6 +99,15 @@ export default function Router() {
 				element={
 					<AuthorizedRoute title="Tasks" permissions={[]}>
 						<Tasks />
+					</AuthorizedRoute>
+				}
+			/>
+
+			<Route
+				path="/tasks/recurring"
+				element={
+					<AuthorizedRoute title="Recurring Tasks" permissions={[]}>
+						<RecurringTasks />
 					</AuthorizedRoute>
 				}
 			/>

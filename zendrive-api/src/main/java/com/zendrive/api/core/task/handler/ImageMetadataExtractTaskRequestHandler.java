@@ -9,7 +9,7 @@ import com.zendrive.api.core.model.metafile.StorageType;
 import com.zendrive.api.core.repository.zendrive.elastic.MetafileRepository;
 import com.zendrive.api.core.service.metafile.MetafileService;
 import com.zendrive.api.core.task.model.request.ImageMetadataExtractTaskRequest;
-import com.zendrive.api.exception.BadRequestException;
+import com.zendrive.api.exception.InvalidArgumentsException;
 import org.jobrunr.jobs.context.JobDashboardLogger;
 import org.jobrunr.jobs.context.JobDashboardProgressBar;
 import org.jobrunr.jobs.lambdas.JobRequestHandler;
@@ -22,7 +22,6 @@ import java.util.*;
 
 @Component
 public class ImageMetadataExtractTaskRequestHandler implements JobRequestHandler<ImageMetadataExtractTaskRequest> {
-	private final MetafileRepository metafileRepository;
 	private final MetafileService metafileService;
 
 	private JobDashboardLogger LOGGER;
@@ -33,7 +32,6 @@ public class ImageMetadataExtractTaskRequestHandler implements JobRequestHandler
 		MetafileService metafileService
 	) {
 		super();
-		this.metafileRepository = metafileRepository;
 		this.metafileService = metafileService;
 	}
 
@@ -48,8 +46,7 @@ public class ImageMetadataExtractTaskRequestHandler implements JobRequestHandler
 
 			LOGGER.info("Initializing 'Metadata Extract Task' for directory: " + directoryId);
 
-			MetaFile start = metafileService.get(directoryId)
-																			.orElseThrow(() -> new BadRequestException("Start not found"));
+			MetaFile start = metafileService.get(directoryId);
 			LOGGER.info("Starting from %s".formatted(start.getId()));
 			progressBar.setProgress(500);
 
@@ -113,7 +110,7 @@ public class ImageMetadataExtractTaskRequestHandler implements JobRequestHandler
 			case LOCAL:
 				return new FileInputStream(path);
 			default:
-				throw new IllegalArgumentException();
+				throw new InvalidArgumentsException("Unsupported storage type: %s".formatted(storageType));
 		}
 	}
 

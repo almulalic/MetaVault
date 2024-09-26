@@ -8,7 +8,7 @@ import { toast } from "@elements/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Combobox } from "@elements/ui/combobox";
 import { schemaToObject } from "@utils/jsonSchema";
-import { TaskService } from "@services/TaskService";
+import { TaskService } from "@services/task/TaskService";
 import { AppDispatch, RootState } from "@store/store";
 import { useDispatch, useSelector } from "react-redux";
 import IconButton from "@elements/IconButton/IconButton";
@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogTitle } from "@elements/ui/dialog";
 import { reset_run_task_state, set_run_task_loading } from "@store/slice";
 import { isValidJson } from "@utils/utils";
 import { isFile } from "@utils/metafile";
+import { TaskDefinitionService } from "@services/task/TaskDefinitionService";
 
 export default function RunTaskDialog() {
 	const dispatch = useDispatch<AppDispatch>();
@@ -44,7 +45,7 @@ export default function RunTaskDialog() {
 	const [jsonPayload, setJsonPayload] = useState({});
 
 	async function getAvailableTasks(query: string) {
-		const response: AxiosResponse<TaskDefinition[]> = await TaskService.getDefinitions(query);
+		const response: AxiosResponse<TaskDefinition[]> = await TaskDefinitionService.getAll(query);
 
 		if (response.status === 200) {
 			setAvailableTasksDefinitions(response.data);
@@ -58,6 +59,7 @@ export default function RunTaskDialog() {
 	): Promise<CreateTaskResponse<any> | null> {
 		dispatch(set_run_task_loading(true));
 
+		//todo fix to try catch
 		const response: AxiosResponse<CreateTaskResponse<any>> = await TaskService.run<any>({
 			name: name,
 			definitionId: definitionId,

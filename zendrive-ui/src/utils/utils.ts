@@ -1,9 +1,10 @@
-import { toast } from "@elements/ui/use-toast";
-import { SelectionState } from "@store/slice";
-import { Row } from "@tanstack/react-table";
+import parser from "cron-parser";
 import { AxiosResponse } from "axios";
-import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { Row } from "@tanstack/react-table";
+import { type ClassValue, clsx } from "clsx";
+import { SelectionState } from "@store/slice";
+import { toast } from "@elements/ui/use-toast";
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -25,15 +26,21 @@ export function convertBytes(bytes: any) {
 
 export function getRowRange<T>(
 	rows: Row<T>[],
-	selectionState: SelectionState,
+	selectionState: SelectionState<T>,
 	currentId: number
-): [Row<T>[], SelectionState] {
+): [Row<T>[], SelectionState<T>] {
+	rows = rows.slice(
+		Math.min(selectionState.start, currentId),
+		Math.max(selectionState.start, currentId) + 1
+	);
+
 	return [
-		rows.slice(
-			Math.min(selectionState.start, currentId),
-			Math.max(selectionState.start, currentId) + 1
-		),
-		{ start: selectionState.start, end: currentId }
+		rows,
+		{
+			start: selectionState.start,
+			end: currentId,
+			entities: rows.map((x) => x.original)
+		}
 	];
 }
 
@@ -112,4 +119,29 @@ export function isValidJson(object: any): boolean {
 		console.log(err);
 		return false;
 	}
+}
+
+export function isValidCron(cronExpression: string): boolean {
+	try {
+		parser.parseExpression(cronExpression);
+		return true;
+	} catch (err) {
+		console.error("Error parsing cron expression:", err);
+		return false;
+	}
+}
+
+export function calculateNextCronRun(cronExpression: string): number {
+	try {
+		return parser.parseExpression(cronExpression).next().getTime();
+	} catch (err) {
+		console.error("Error parsing cron expression:", err);
+		return 0;
+	}
+}
+
+export function camelCaseToWords(str: string): string {
+	return str
+		.replace(/([a-z])([A-Z])/g, "$1 $2")
+		.replace(/^./, (firstChar) => firstChar.toUpperCase());
 }

@@ -1,7 +1,6 @@
-import { MetaFile, MetafileConfig } from "@apiModels/index";
-import { StorageConfig } from "@apiModels/metafile/StorageConfig";
-import { StorageType } from "@apiModels/metafile/StorageType";
 import { FileStats } from "@apiModels/stats/FileStats";
+import { MetaFile, MetafileConfig } from "@apiModels/index";
+import { StorageType } from "@apiModels/metafile/StorageType";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface PermissionsInput {
@@ -10,17 +9,10 @@ export interface PermissionsInput {
 	execute: string[];
 }
 
-export interface ConfigInput {
-	sync: boolean;
-	inputPath: string;
-	storageConfig: StorageConfig;
-}
-
 export interface AddDirectoryState {
 	currentStep: number;
-	fileStats: FileStats | null;
 	isLoading: boolean;
-	config: MetafileConfig;
+	metafileConfig: MetafileConfig;
 	generatedMetafile: MetaFile | null;
 	permissions: PermissionsInput;
 }
@@ -32,12 +24,11 @@ const initialState: AddDirectoryState = {
 		write: [],
 		execute: []
 	},
-	fileStats: null,
 	isLoading: false,
 	generatedMetafile: null,
-	config: {
-		sync: false,
+	metafileConfig: {
 		inputPath: "",
+		syncConfig: null,
 		storageConfig: {
 			type: StorageType.LOCAL,
 			credentials: ""
@@ -51,7 +42,7 @@ const addDirectorySlice = createSlice({
 	reducers: {
 		reset_add_directory_state: () => initialState,
 		set_path: (state: AddDirectoryState, data: PayloadAction<string>) => {
-			state.config.inputPath = data.payload;
+			state.metafileConfig.inputPath = data.payload;
 		},
 		change_step: (state: AddDirectoryState, data: PayloadAction<number>) => {
 			state.currentStep = data.payload;
@@ -63,20 +54,19 @@ const addDirectorySlice = createSlice({
 			state.currentStep = state.currentStep - 1;
 		},
 		change_storage_type: (state: AddDirectoryState, data: PayloadAction<StorageType>) => {
-			state.config.storageConfig.type = data.payload;
+			if (state.metafileConfig.storageConfig.type !== data.payload) {
+				state.metafileConfig.inputPath = "";
+				state.metafileConfig.storageConfig.type = data.payload;
+			}
 		},
 		set_storage_crednetials: (state: AddDirectoryState, data: PayloadAction<string>) => {
-			state.config.storageConfig.credentials = data.payload;
+			state.metafileConfig.storageConfig.credentials = data.payload;
 		},
 		change_permissions: (state: AddDirectoryState, data: PayloadAction<any>) => {
-			//TODO fix any
 			state.permissions = { ...state.permissions, ...data.payload };
 		},
 		change_config: (state: AddDirectoryState, data: PayloadAction<MetafileConfig>) => {
-			state.config = { ...state.config, ...data.payload };
-		},
-		set_file_stats: (state: AddDirectoryState, data: PayloadAction<FileStats>) => {
-			state.fileStats = data.payload;
+			state.metafileConfig = { ...state.metafileConfig, ...data.payload };
 		},
 		set_add_form_loading: (state: AddDirectoryState, data: PayloadAction<boolean>) => {
 			state.isLoading = data.payload;
@@ -95,7 +85,6 @@ export const {
 	next_step,
 	previous_step,
 	set_add_form_loading,
-	set_file_stats,
 	set_generated_metafile,
 	change_permissions,
 	change_config,

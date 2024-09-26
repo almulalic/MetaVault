@@ -7,15 +7,15 @@ import com.zendrive.api.core.repository.zendrive.pgdb.UserRepository;
 import com.zendrive.api.core.repository.zendrive.elastic.MetafileRepository;
 import com.zendrive.api.core.repository.zendrive.pgdb.UserFavoriteRepository;
 import com.zendrive.api.core.repository.zendrive.pgdb.RoleRepository;
-import com.zendrive.api.exception.BadRequestException;
-import com.zendrive.api.exception.repository.UserNotFoundException;
+import com.zendrive.api.exception.InvalidArgumentsException;
+import com.zendrive.api.exception.ZendriveErrorCode;
+import com.zendrive.api.exception.ZendriveException;
 import com.zendrive.api.rest.models.dto.auth.CreateUserRequest;
 import com.zendrive.api.rest.models.dto.metafile.UserDto;
 import com.zendrive.api.rest.models.dto.user.UpdateUserDto;
 import com.zendrive.api.rest.models.dto.user.UserFavoriteView;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -61,11 +61,15 @@ public class UserService {
 			Optional<MetaFile> optionalMetaFile = metafileRepository.findById(metafileId);
 
 			if (optionalMetaFile.isEmpty()) {
-				throw new BadRequestException(String.format("Metafile with ID: %s was not found.", metafileId));
+				throw new InvalidArgumentsException(
+					String.format("Metafile with ID: %s was not found.", metafileId)
+				);
 			}
 
 			if (userFavoriteRepository.findUsersFavoriteByMetafileId(userId, metafileId).isPresent()) {
-				throw new BadRequestException(String.format("Metafile with ID: %s is already favorite.", metafileId));
+				throw new InvalidArgumentsException(
+					String.format("Metafile with ID: %s is already favorite.", metafileId)
+				);
 			}
 
 			UserFavorite userFavorite = userFavoriteRepository.save(
@@ -81,8 +85,7 @@ public class UserService {
 		return successful;
 	}
 
-	public List<UserFavoriteView> removeFromFavorites(Long userId, List<String> metafileIds)
-		throws BadRequestException {
+	public List<UserFavoriteView> removeFromFavorites(Long userId, List<String> metafileIds) {
 		List<UserFavoriteView> successful = new ArrayList<>();
 
 		for (String metafileId : metafileIds) {
@@ -92,10 +95,12 @@ public class UserService {
 			);
 
 			if (userFavorite.isEmpty()) {
-				throw new BadRequestException(String.format(
-					"Metafile with ID: %s was not found in favorites.",
-					metafileId
-				));
+				throw new InvalidArgumentsException(
+					String.format(
+						"Metafile with ID: %s was not found in favorites.",
+						metafileId
+					)
+				);
 			}
 
 			successful.add(new UserFavoriteView(userFavorite.get(), metafileRepository.findById(metafileId).get()));
@@ -123,16 +128,15 @@ public class UserService {
 	 *
 	 * @param id The ID of the user.
 	 * @return UserDTO representing the user.
-	 * @throws UserNotFoundException if the user with the given ID does not exist.
 	 */
-	public UserDto getUserById(Long id) {
+	public User getUserById(Long id) {
 		Optional<User> user = userRepository.findById(id);
 
 		if (user.isEmpty()) {
-			throw new UserNotFoundException("The user with the given ID does not exist.");
+			throw new InvalidArgumentsException("The user with the given ID does not exist.");
 		}
 
-		return new UserDto(user.get());
+		return user.get();
 	}
 
 	/**
@@ -140,13 +144,14 @@ public class UserService {
 	 *
 	 * @param identifier The username or email of the user.
 	 * @return The User object representing the user.
-	 * @throws UserNotFoundException if the user with the given username or email does not exist.
 	 */
 	public User getUser(String identifier) {
 		Optional<User> user = userRepository.findByUsernameOrEmail(identifier, identifier);
 
 		if (user.isEmpty()) {
-			throw new UserNotFoundException("The user with the given ID does not exist.");
+			throw new InvalidArgumentsException(
+				"The user with the given identifier does not exist."
+			);
 		}
 
 		return user.get();
@@ -155,19 +160,11 @@ public class UserService {
 	/**
 	 * Checks if a user with the given username or email exists.
 	 *
-	 * @param username The username of the user.
-	 * @param email    The email address of the user.
+	 * @param email The email address of the user.
 	 * @return The User object representing the user.
-	 * @throws UserNotFoundException if the user with the given username or email does not exist.
 	 */
-	public User isUniqueUser(String username, String email) {
-		Optional<User> user = userRepository.findByUsernameOrEmail(username, email);
-
-		if (user.isEmpty()) {
-			throw new UserNotFoundException("The user with the given ID does not exist.");
-		}
-
-		return user.get();
+	public boolean isUserUnique(String email) {
+		return userRepository.findByEmail(email).isEmpty();
 	}
 
 	/**
@@ -176,26 +173,21 @@ public class UserService {
 	 * @param dto The CreateUserRequest object representing the user to be added.
 	 * @return The UserDTO representing the added user.
 	 */
-	public UserDto createUser(Long id, CreateUserRequest dto) {
-		if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
-			throw new BadRequestException("User with that email already exists");
+	public User createUser(Long id, CreateUserRequest dto) {
+		if (isUserUnique(dto.getEmail())) {
+			throw new InvalidArgumentsException("User with that email already exists");
 		}
 
 		User user = dto.toEntity();
 
-		try {
-			user.setRoles(roleRepository.getRoles(dto.getRoles()));
-		} catch (IllegalArgumentException ex) {
-			throw new BadRequestException(ex.getMessage());
-		}
-
+		user.setRoles(roleRepository.getRoles(dto.getRoles()));
 		user.setCreatedBy(userRepository.findById(id).get());
 		user.setUsername(dto.getEmail());
 		user.setPassword("");
 
 		userRepository.save(user);
 
-		return new UserDto(user);
+		return user;
 	}
 
 	/**
@@ -204,22 +196,12 @@ public class UserService {
 	 * @param id  The ID of the user to be updated.
 	 * @param dto The EditUserDto object representing the updated user information.
 	 * @return The UserDTO representing the updated user.
-	 * @throws UserNotFoundException if the user with the given ID does not exist.
 	 */
-	public UserDto updateUser(Long id, UpdateUserDto dto) {
-		Optional<User> optionalUser = userRepository.findById(id);
+	public User updateUser(Long id, UpdateUserDto dto) {
+		User user = getUserById(id);
 
-		if (optionalUser.isEmpty()) {
-			throw new UserNotFoundException("The user with the given ID does not exist.");
-		}
-
-		User user = optionalUser.get();
-
-		if (
-			!user.getEmail().equals(dto.getEmail()) &&
-			userRepository.findByEmail(dto.getEmail()).isPresent()
-		) {
-			throw new BadRequestException("Email must be unique!");
+		if (!user.getEmail().equals(dto.getEmail()) && userRepository.findByEmail(dto.getEmail()).isPresent()) {
+			throw new InvalidArgumentsException("Email must be unique!");
 		}
 
 		user.setFirstName(dto.getFirstName());
@@ -229,7 +211,7 @@ public class UserService {
 
 		userRepository.save(user);
 
-		return new UserDto(user);
+		return user;
 	}
 
 	/**
@@ -238,8 +220,7 @@ public class UserService {
 	 * @param id The ID of the user to be deleted.
 	 */
 	public void deleteUser(Long id) {
-		Optional<User> user = userRepository.findById(id);
-		user.ifPresent(userRepository::delete);
+		userRepository.delete(getUserById(id));
 	}
 
 	/**
@@ -249,7 +230,7 @@ public class UserService {
 	 */
 	public UserDetailsService userDetailsService() {
 		return identifier -> userRepository.findByUsernameOrEmail(identifier, identifier)
-																			 .orElseThrow(() -> new UsernameNotFoundException("User not found."));
+																			 .orElseThrow(() -> new InvalidArgumentsException("User not found."));
 	}
 
 }

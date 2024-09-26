@@ -1,13 +1,18 @@
+import { SyncConfig } from "./SyncConfig";
 import { StorageConfig } from "./StorageConfig";
 
 export class MetafileConfig {
-	sync: boolean;
 	inputPath: string | null;
 	storageConfig: StorageConfig;
+	syncConfig: SyncConfig | null;
 
-	constructor(sync: boolean, inputPath: string | null, storageConfig: StorageConfig) {
-		this.sync = sync;
+	constructor(
+		inputPath: string | null,
+		storageConfig: StorageConfig,
+		syncConfig: SyncConfig | null
+	) {
 		this.inputPath = inputPath;
 		this.storageConfig = storageConfig;
+		this.syncConfig = syncConfig;
 	}
 }

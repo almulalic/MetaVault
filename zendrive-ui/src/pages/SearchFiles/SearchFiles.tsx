@@ -1,34 +1,23 @@
-import { AxiosResponse } from "axios";
-import { Page } from "@apiModels/Page";
 import { RootState } from "@store/store";
 import { Input } from "@elements/ui/input";
+import { isFolder } from "@utils/metafile";
 import { Toggle } from "@elements/ui/toggle";
 import { useNavigate } from "react-router-dom";
-import { set_files_loading, set_search_query } from "@store/slice";
-import { useEffect, useMemo, useState } from "react";
+import { set_search_query } from "@store/slice";
 import { useDispatch, useSelector } from "react-redux";
 import { MetaFile } from "@apiModels/metafile/MetaFile";
 import { FilePage } from "@components/FilePage/FilePage";
+import { DataTable } from "@elements/DataTable/DataTable";
 import { SearchFileColumnDef } from "./components/Columns";
+import { MetafileService } from "@services/MetafileService";
 import { ColumnDef, Row, Table } from "@tanstack/react-table";
 import { set_details_expanded } from "@store/slice/userSlice";
-import { FilesTable } from "@components/FilesTable/FilesTable";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
-import { MetafileService } from "@services/MetafileService";
+import { MouseEvent, useEffect, useMemo, useState } from "react";
 import DetailsPanel from "@components/DetailsPanel/DetailsPanel";
 import Heading, { HeadingType } from "@components/Heading/Heading";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { SearchRequest } from "@apiModels/metafile/dto/SearchRequest";
-import { isFolder } from "@utils/metafile";
-import {
-	Pagination,
-	PaginationContent,
-	PaginationEllipsis,
-	PaginationItem,
-	PaginationLink,
-	PaginationNext,
-	PaginationPrevious
-} from "@elements/ui/pagination";
-import { cn } from "@utils/utils";
 
 export default function SearchFiles() {
 	const navigate = useNavigate();
@@ -42,54 +31,27 @@ export default function SearchFiles() {
 	const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [pageSize, setPageSize] = useState(15);
-	const [paginationPages, setPaginationPages] = useState<number[]>([]);
-	const [totalPages, setTotalPages] = useState(0);
-
-	const [currentView, setCurrentView] = useState<MetaFile[]>([]);
 
 	const columns: ColumnDef<MetaFile>[] = useMemo<ColumnDef<MetaFile>[]>(
 		() => SearchFileColumnDef,
 		[]
 	);
 
-	async function getMetafiles(searchQuery: string) {
-		dispatch(set_files_loading(true));
+	const { data: searchPage, refetch } = useQuery({
+		queryKey: ["search", currentPage],
+		queryFn: async () =>
+			(await MetafileService.search(new SearchRequest(searchQuery, currentPage - 1, pageSize)))
+				.data,
+		placeholderData: keepPreviousData
+	});
 
-		const response: AxiosResponse<Page<MetaFile>> = await MetafileService.search(
-			new SearchRequest(searchQuery, currentPage - 1, pageSize)
-		);
-
-		if (response.status === 200) {
-			setCurrentView(response.data.content);
-			setTotalPages(response.data.totalPages);
-
-			const pagesMax = response.data.totalPages;
-			const pagination = [];
-
-			if (currentPage - 1 > 0) {
-				pagination.push(currentPage - 1);
-			}
-
-			pagination.push(currentPage);
-
-			if (currentPage + 1 <= pagesMax) {
-				pagination.push(currentPage + 1);
-			}
-
-			setTotalPages(pagesMax);
-			setPaginationPages(pagination);
-		}
-
-		dispatch(set_files_loading(false));
-	}
-
-	const handleRowClick = (_: Table<MetaFile>, __: Row<MetaFile> | null, metafile: MetaFile) => {
-		if (isFolder(metafile)) {
-			navigate(`/files/tree/${metafile.id}`);
-		} else {
-			alert("Opening preview for: " + metafile.name);
-		}
-	};
+	useEffect(() => {
+		const params = new URLSearchParams();
+		params.set("page", currentPage.toString());
+		params.set("size", pageSize.toString());
+		params.set("query", searchQuery);
+		navigate(`?${params.toString()}`, { replace: true });
+	}, [currentPage, pageSize, navigate]);
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
@@ -102,30 +64,28 @@ export default function SearchFiles() {
 	}, [searchQuery]);
 
 	useEffect(() => {
-		getMetafiles(searchQuery);
+		refetch();
 	}, [debouncedQuery, currentPage, pageSize]);
 
-	const onPreviousPage = () => {
-		if (currentPage - 1 > 0) {
-			setCurrentPage(currentPage - 1);
-		}
-	};
-
-	const onNextPage = () => {
-		if (currentPage + 1 <= totalPages) {
-			setCurrentPage(currentPage + 1);
-		}
-	};
-
-	const onPaginationNumberClick = (page: number) => {
-		if (page <= totalPages) {
-			setCurrentPage(page);
-		}
-	};
+	if (!searchPage) {
+		return;
+	}
 
 	function onSearchChange(e: any) {
 		dispatch(set_search_query(e.target.value));
 	}
+
+	const handleRowClick = (
+		_: MouseEvent<HTMLTableRowElement>,
+		__: Table<MetaFile>,
+		row: Row<MetaFile>
+	) => {
+		if (isFolder(row.original)) {
+			navigate(`/files/tree/${row.original.id}`);
+		} else {
+			navigate(`/files/tree/${row.original.previous}`);
+		}
+	};
 
 	return (
 		<FilePage title="Search files">
@@ -169,46 +129,19 @@ export default function SearchFiles() {
 						/>
 					</div>
 
-					<FilesTable
+					<DataTable
 						columns={columns}
-						data={currentView}
+						data={searchPage.content}
 						onRowClick={handleRowClick}
 						onRowBack={() => {}}
 						isLoading={isLoading}
+						isInitialLoad={false}
+						pagination={{
+							current: currentPage,
+							totalPages: searchPage.totalPages,
+							onPageChange: (page) => setCurrentPage(page)
+						}}
 					/>
-
-					<Pagination>
-						<PaginationContent>
-							<PaginationItem
-								className={cn(
-									"cursor-pointer",
-									isLoading || (currentPage === 1 && "cursor-not-allowed hover:bg-muted")
-								)}
-							>
-								<PaginationPrevious onClick={onPreviousPage} />
-							</PaginationItem>
-							{paginationPages.map((number, index) => {
-								return (
-									<PaginationItem key={index}>
-										<PaginationLink
-											onClick={() => onPaginationNumberClick(number)}
-											isActive={number == currentPage}
-										>
-											{number}
-										</PaginationLink>
-									</PaginationItem>
-								);
-							})}
-							{paginationPages.length < totalPages && currentPage < totalPages - 2 && (
-								<PaginationItem className="cursor-pointer">
-									<PaginationEllipsis />
-								</PaginationItem>
-							)}
-							<PaginationItem className="cursor-pointer">
-								<PaginationNext onClick={onNextPage} />
-							</PaginationItem>
-						</PaginationContent>
-					</Pagination>
 				</div>
 
 				<DetailsPanel />

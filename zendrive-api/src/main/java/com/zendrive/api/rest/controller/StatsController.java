@@ -10,9 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("api/stats")
+@RequestMapping("/v1/stats")
 @RequiredArgsConstructor
-public class StatsController {
+public class StatsController extends Controller {
 	private final StatsService statsService;
 
 	@RequestMapping(method = RequestMethod.POST, path = "")

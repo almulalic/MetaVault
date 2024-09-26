@@ -7,7 +7,8 @@ import {
 	fileTableReducer,
 	userReducer,
 	taskTableReducer,
-	runTaskReducer
+	runTaskReducer,
+	recurringTaskReducer
 } from "./slice";
 
 const store = configureStore({
@@ -18,7 +19,8 @@ const store = configureStore({
 		fileTable: fileTableReducer,
 		user: userReducer,
 		taskTable: taskTableReducer,
-		runTask: runTaskReducer
+		runTask: runTaskReducer,
+		recurringTask: recurringTaskReducer
 	}
 });
 

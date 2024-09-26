@@ -1,21 +1,14 @@
 package com.zendrive.api.core.configuration.vfs;
 
-import com.zendrive.api.core.model.metafile.StorageConfig;
-import com.zendrive.api.core.model.metafile.StorageType;
+import com.zendrive.api.core.model.task.StorageConfig;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.vfs2.FileSystemOptions;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-import lombok.RequiredArgsConstructor;
-
-import java.util.Map;
 
 @Data
 @Configuration

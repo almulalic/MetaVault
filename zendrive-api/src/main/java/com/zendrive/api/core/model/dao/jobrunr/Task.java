@@ -26,9 +26,6 @@ public class Task {
 	@Column(name = "version", nullable = false)
 	private Integer version;
 
-	//    @Column(name = "jobasjson", columnDefinition = "TEXT", nullable = false)
-	//    private String taskAsJson;
-
 	@Convert(converter = TaskDataAttributeConverter.class)
 	@Column(name = "jobasjson", insertable = false, updatable = false)
 	private TaskData data;

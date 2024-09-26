@@ -2,9 +2,10 @@ package com.zendrive.api.core.task.handler;
 
 import com.zendrive.api.core.configuration.vfs.FileSystemOptionsConfig;
 import com.zendrive.api.core.model.dao.elastic.metafile.MetaFile;
-import com.zendrive.api.core.model.metafile.StorageConfig;
+import com.zendrive.api.core.model.task.StorageConfig;
 import com.zendrive.api.core.model.metafile.StorageType;
 import com.zendrive.api.core.service.s3.S3Utils;
+import com.zendrive.api.exception.InvalidArgumentsException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
@@ -16,6 +17,7 @@ import org.jobrunr.jobs.context.JobDashboardProgressBar;
 import org.jobrunr.jobs.lambdas.JobRequest;
 import org.jobrunr.jobs.lambdas.JobRequestHandler;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import java.io.FileInputStream;
@@ -32,6 +34,7 @@ import static com.zendrive.api.core.utils.StringUtil.removeTrailingSlash;
 @Component
 @RequiredArgsConstructor
 public class JobHandler<T extends JobRequest> implements JobRequestHandler<T> {
+	protected String jobId;
 	protected String name;
 	protected JobDashboardLogger LOGGER;
 	protected JobDashboardProgressBar progressBar;
@@ -51,8 +54,18 @@ public class JobHandler<T extends JobRequest> implements JobRequestHandler<T> {
 	protected void initialize(JobContext jobContext) {
 		this.jobContext = jobContext;
 		this.LOGGER = jobContext.logger();
+		this.jobId = jobContext.getJobId().toString();
 		this.progressBar = jobContext.progressBar(PROGRESS_MAX);
 		this.progressBar.setProgress(0);
+	}
+
+	protected List<MetaFile> applyExtensionsWhitelist(List<MetaFile> metaFiles, List<String> extensionsWhitelist) {
+		LOGGER.info("Applying extension whitelist filter. Allowed extensions: %s".formatted(extensionsWhitelist));
+
+		return metaFiles
+						 .stream()
+						 .filter(x -> extensionsWhitelist.contains(StringUtils.getFilenameExtension(x.getBlobPath())))
+						 .toList();
 	}
 
 	protected void setS3Client(S3Client s3Client) {
@@ -106,7 +119,7 @@ public class JobHandler<T extends JobRequest> implements JobRequestHandler<T> {
 			case S3:
 				return S3Utils.getInputStream(s3Client, path);
 			default:
-				throw new IllegalArgumentException();
+				throw new InvalidArgumentsException("Storage type not supported: %s".formatted(storageType));
 		}
 	}
 

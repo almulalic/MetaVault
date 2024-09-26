@@ -1,18 +1,18 @@
 import { DateTime } from "luxon";
-import { ReactNode, useState } from "react";
 import { RootState } from "@store/store";
 import { Badge } from "@elements/ui/badge";
+import { ReactNode, useState } from "react";
 import { Tabs } from "@radix-ui/react-tabs";
-import { cn, convertBytes } from "@utils/utils";
 import { Button } from "@elements/ui/button";
+import { download } from "../../utils/utils";
+import { cn, convertBytes } from "@utils/utils";
+import { isFile, isFolder } from "@utils/metafile";
 import { useDispatch, useSelector } from "react-redux";
 import { DATE_TIME_FORMAT } from "@constants/constants";
+import { MetafileService } from "@services/MetafileService";
 import { set_details_expanded } from "@store/slice/userSlice";
 import { TabsContent, TabsList, TabsTrigger } from "@elements/ui/tabs";
 import { DownloadIcon, FileIcon, FolderIcon, Share2Icon } from "lucide-react";
-import { download } from "../../utils/utils";
-import { MetafileService } from "@services/MetafileService";
-import { isFile, isFolder } from "@utils/metafile";
 import {
 	Dialog,
 	DialogContent,
@@ -61,7 +61,6 @@ export default function DetailsPanel({ handleChange }: DetailsPanelProps) {
 	const MetadataLine = ({ label, value }: { label: string; value: any }) => {
 		const [isOpen, setOpen] = useState(false);
 
-		console.log(label, value);
 		return (
 			<Dialog open={isOpen} onOpenChange={setOpen}>
 				<DialogTrigger asChild>
@@ -74,7 +73,9 @@ export default function DetailsPanel({ handleChange }: DetailsPanelProps) {
 						<DialogTitle>{label}</DialogTitle>
 					</DialogHeader>
 					<DialogDescription hidden>Value of metadata key {label}</DialogDescription>
-					<p>{typeof value === "string" ? value : JSON.stringify(value)}</p>
+					<p className="max-h-[400px] overflow-auto">
+						{typeof value === "string" ? value : JSON.stringify(value)}
+					</p>
 					<DialogFooter>
 						<Button onClick={() => setOpen(!isOpen)}>Close</Button>
 					</DialogFooter>
@@ -101,13 +102,13 @@ export default function DetailsPanel({ handleChange }: DetailsPanelProps) {
 					<div className="flex items-center space-x-4">
 						<div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
 							{isFile(activeMetafile) ? (
-								<FileIcon className="w-6 h-6 text-blue-600" />
+								<FileIcon className="w-6 h-6 min-w-6 min-h-6 text-blue-600" />
 							) : (
-								<FolderIcon className="w-6 h-6 text-blue-600" />
+								<FolderIcon className="w-6 h-6 min-w-6 max-w-6 text-blue-600" />
 							)}
 						</div>
 						<div className="flex-grow">
-							<h2 className="text-xl font-semibold break-words">{activeMetafile.name}</h2>
+							<h2 className="text-xl font-semibold break-words max-w-36">{activeMetafile.name}</h2>
 							<p className="text-sm text-gray-500">{activeMetafile.contentType || "Folder"}</p>
 						</div>
 						{activeMetafile.config?.storageConfig &&
@@ -150,9 +151,9 @@ export default function DetailsPanel({ handleChange }: DetailsPanelProps) {
 
 												<InfoLine
 													label="Size"
-													value={`${activeMetafile.size} (${convertBytes(
+													value={`${convertBytes(activeMetafile.size)} (${
 														activeMetafile.size
-													)} bytes)`}
+													} bytes)`}
 												/>
 
 												{isFolder(activeMetafile) && (

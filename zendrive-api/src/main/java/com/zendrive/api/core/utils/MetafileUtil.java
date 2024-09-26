@@ -3,6 +3,7 @@ package com.zendrive.api.core.utils;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.zendrive.api.core.model.dao.elastic.metafile.MetaFile;
 import com.zendrive.api.core.model.metafile.*;
+import com.zendrive.api.exception.InvalidArgumentsException;
 import org.apache.commons.vfs2.FileContent;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSystemException;
@@ -38,7 +39,7 @@ public class MetafileUtil {
 				}
 			}
 		} else {
-			throw new IllegalArgumentException("Path doesn't exist");
+			throw new InvalidArgumentsException("Path doesn't exist");
 		}
 
 		return stats;
@@ -51,6 +52,24 @@ public class MetafileUtil {
 			}
 
 			calculateFolderSize(metaFile, metaFileMap);
+		}
+	}
+
+	public static void deleteMissingChildren(List<MetaFile> metaFiles, Map<String, MetaFile> metaFileMap) {
+		for (MetaFile metaFile : metaFiles) {
+			if (metaFile.getChildren() == null) {
+				continue;
+			}
+
+			deleteMissingChildren(metaFile, metaFileMap);
+		}
+	}
+
+	public static void deleteMissingChildren(MetaFile metaFile, Map<String, MetaFile> metaFileMap) {
+		for (String childId : metaFile.getChildren()) {
+			if (metaFileMap.get(childId) == null) {
+				metaFile.setChildren(metaFile.getChildren().stream().filter(x -> !x.equals(childId)).toList());
+			}
 		}
 	}
 
@@ -88,12 +107,16 @@ public class MetafileUtil {
 	public static MetaFile processSingleFile(
 		FileObject file,
 		URI inputPath,
-		String parentId,
+		MetaFile parent,
 		MetaFileConfig config,
 		Permissions permissions
 	) throws FileSystemException, URISyntaxException {
 		FileContent content = file.getContent();
 		List<Breadcrumb> breadcrumbs = MetafileUtil.generateBreadcrumbs(file, inputPath);
+
+		if (!parent.getName().equals("root") && !parent.getName().equals("/")) {
+			breadcrumbs.addAll(0, parent.getBreadcrumbs().subList(0, parent.getBreadcrumbs().size() - 1));
+		}
 
 		return MetaFile.Builder()
 									 .withId(UUID.randomUUID().toString())
@@ -104,7 +127,7 @@ public class MetafileUtil {
 									 .withLastSyncMs(System.currentTimeMillis()) // TODO Timezone
 									 .withConfig(config)
 									 .withBlobPath(file.toString())
-									 .withPrevious(parentId)
+									 .withPrevious(parent.getPrevious())
 									 .withChildren(file.isFolder() ? new ArrayList<>() : null)
 									 .withBreadcrumbs(breadcrumbs)
 									 .withPermissions(permissions)
@@ -136,10 +159,13 @@ public class MetafileUtil {
 					parentMetaFile.setChildren(new ArrayList<>());
 				}
 
-				parentMetaFile.getChildren().add(metaFile.getId());
+				if (!parentMetaFile.getChildren().contains(metaFile.getId())) {
+					parentMetaFile.getChildren().add(metaFile.getId());
+				}
 			}
 		}
 	}
+
 
 	public static void buildBreadcrumbs(
 		Map<String, String> pathToIdMap,
@@ -149,6 +175,10 @@ public class MetafileUtil {
 		for (MetaFile metaFile : metaFiles) {
 			StringBuilder breadcrumbPathBuilder = new StringBuilder(getParent(inputUri.toString()));
 			for (Breadcrumb breadcrumb : metaFile.getBreadcrumbs()) {
+				if (breadcrumb.getId() != null) {
+					continue;
+				}
+
 				breadcrumbPathBuilder.append("/").append(breadcrumb.getName());
 				String breadcrumbPath = breadcrumbPathBuilder.toString();
 				String breadcrumbId = pathToIdMap.get(breadcrumbPath);
@@ -159,7 +189,7 @@ public class MetafileUtil {
 
 	public static String getParent(String input) {
 		if (input == null || input.isEmpty()) {
-			throw new IllegalArgumentException("Input string cannot be null or empty");
+			throw new InvalidArgumentsException("Input string cannot be null or empty");
 		}
 
 		int lastSlashIndex = input.lastIndexOf('/');

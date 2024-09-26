@@ -1,0 +1,33 @@
+@startuml
+|UI|
+start
+:Select a file or folder;
+:Click the download button;
+|Metafile Controller|
+:Receive Request;
+:Validate Request;
+if (Request Valid?) then (no)
+  |Metafile Controller|
+  :Generate error response;
+  |UI|
+  :Display error message;
+  stop
+else (yes)
+  |Metafile Controller|
+  :Forward Request;
+  |Metafile Service|
+  :Get full metafile data;
+  if (Is folder?) then (yes)
+    :Recursively get all metafiles;
+    :Convert to InputStream based on Storage Type;
+    :Create zip archive;
+  else (no)
+    :Convert to InputStream based on Storage Type;
+  endif
+  |Metafile Controller|
+  :Generate filename and response headers;
+  |UI|
+  :Initiate browser download;
+  stop
+endif
+@enduml

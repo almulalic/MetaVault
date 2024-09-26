@@ -1,9 +1,7 @@
 package com.zendrive.api.core.model.jobrunr;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -15,10 +13,18 @@ import lombok.NoArgsConstructor;
 public class TaskMetadata {
 	@JsonIgnore
 	private String className;
-	@JsonAlias({ "jobRunrDashboardLog-2" })
-	@JsonProperty("taskRunrDashboardLog2")
-	private TaskDashboardLog taskRunrDashboardLog2;
-	@JsonAlias({ "jobRunrDashboardProgressBar-2" })
-	@JsonProperty("taskRunrDashboardProgressBar2")
-	private TaskDashboardProgress taskRunrDashboardProgressBar2;
+	private TaskDashboardLog taskRunrDashboardLog;
+	private TaskDashboardProgress taskRunrDashboardProgressBar;
+
+	@JsonIgnore
+	private static final ObjectMapper objectMapper = new ObjectMapper();
+
+	@JsonAnySetter
+	public void handleUnknownProperties(String key, Object value) {
+		if (key.matches("jobRunrDashboardLog-\\d+")) {
+			this.taskRunrDashboardLog = objectMapper.convertValue(value, TaskDashboardLog.class);
+		} else if (key.matches("jobRunrDashboardProgressBar-\\d+")) {
+			this.taskRunrDashboardProgressBar = objectMapper.convertValue(value, TaskDashboardProgress.class);
+		}
+	}
 }
